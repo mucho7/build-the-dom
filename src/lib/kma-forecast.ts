@@ -59,7 +59,7 @@ export async function fetchStadiumForecast(
   }
 
   const items = payload.response?.body?.items?.item ?? [];
-  return { issuedAt: `${baseDate}T${baseTime}:00+09:00`, hours: toHourlyForecasts(items) };
+  return { issuedAt: toKstIsoDateTime(baseDate, baseTime), hours: toHourlyForecasts(items) };
 }
 
 export function getRiskForecast(hours: HourlyForecast[], date: string, time: string) {
@@ -141,6 +141,10 @@ function parsePrecipitationAmount(value: string | undefined) {
   if (value.includes("미만")) return 0.5;
   const matched = value.match(/[\d.]+/);
   return matched ? Number(matched[0]) : 0;
+}
+
+function toKstIsoDateTime(date: string, time: string) {
+  return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T${time.slice(0, 2)}:${time.slice(2, 4)}:00+09:00`;
 }
 
 function toKmaGrid(latitude: number, longitude: number) {
