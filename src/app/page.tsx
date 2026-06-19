@@ -21,7 +21,7 @@ export default function Home() {
         <header className="mb-9 flex items-center justify-between">
           <div>
             <p className="mb-1 text-sm font-medium text-[#697367]">KBO 직관 날씨 가이드</p>
-            <h1 className="text-2xl font-bold tracking-[-0.05em]">우천될까?</h1>
+            <h1 className="text-2xl font-bold tracking-[-0.05em]">우취될까?</h1>
           </div>
           <div className="flex size-11 items-center justify-center rounded-2xl bg-[#e4eddc] text-xl" aria-label="비 예보">
             ☂️

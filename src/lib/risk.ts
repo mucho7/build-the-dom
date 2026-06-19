@@ -42,7 +42,7 @@ export function calculateRainoutRisk(input: RiskInput): RiskAssessment {
   if (score >= 65) {
     return {
       level: "risky",
-      label: "우천 걱정 높음",
+      label: "우취 걱정 높음",
       headline: "다시 생각해보세요",
       summary: "경기 전후로 강한 비가 이어질 가능성이 높아요.",
       preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
@@ -74,7 +74,7 @@ export function calculateRainoutRisk(input: RiskInput): RiskAssessment {
 
   return {
     level: "safe",
-    label: "우천 걱정 낮음",
+    label: "우취 걱정 낮음",
     headline: "갈 만해요",
     summary: "경기 시간에는 비가 내릴 가능성이 낮아요.",
     preparation: "평소처럼 여유 있게 출발해도 좋아요.",
