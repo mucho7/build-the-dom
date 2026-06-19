@@ -74,18 +74,20 @@ model WeatherSnapshot {
   id                       String              @id @default(cuid())
   gameId                   String
   kind                     WeatherSnapshotKind
-  issuedAt                 DateTime?
+  issuedAt                 DateTime
   forecastFor              DateTime
   precipitationProbability Int?
   precipitationAmountMm    Float?
   precipitationType        String?
   humidity                 Int?
   temperature              Float?
+  rainedBeforeGame         Boolean             @default(false)
   createdAt                DateTime            @default(now())
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([gameId, kind, forecastFor, issuedAt])
+  @@index([gameId, issuedAt])
   @@index([forecastFor])
 }
 

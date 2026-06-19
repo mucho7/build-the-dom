@@ -1,5 +1,3 @@
-import type { Stadium } from "@/data/stadiums";
-
 const KMA_FORECAST_ENDPOINT =
   "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getVilageFcst";
 const BASE_TIMES = ["2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"];
@@ -29,7 +27,7 @@ type KmaResponse = {
 };
 
 export async function fetchStadiumForecast(
-  stadium: Stadium,
+  stadium: { latitude: number; longitude: number },
   now = new Date(),
 ): Promise<{ issuedAt: string; hours: HourlyForecast[] }> {
   const authKey = process.env.KMA_AUTH_KEY;

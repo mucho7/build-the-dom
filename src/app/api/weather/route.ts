@@ -1,6 +1,7 @@
 import { getStadium } from "@/data/stadiums";
+import { isDatabaseConfigured } from "@/lib/db";
 import { getHistoricalRainoutStats } from "@/lib/historical-rainout";
-import { fetchStadiumForecast, getRiskForecast, KmaConfigurationError } from "@/lib/kma-forecast";
+import { getCachedGameForecast } from "@/lib/weather-cache";
 import { applyHistoricalRainoutAdjustment, calculateRainoutRisk } from "@/lib/risk";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +19,16 @@ export async function GET(request: Request) {
     );
   }
 
+  if (!isDatabaseConfigured()) {
+    return Response.json({ message: "기상청 예보 캐시가 아직 설정되지 않았습니다." }, { status: 503 });
+  }
+
   try {
-    const forecast = await fetchStadiumForecast(stadium);
-    const gameForecast = getRiskForecast(forecast.hours, date, time);
+    const gameForecast = await getCachedGameForecast(stadium.id, `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`, time);
     if (!gameForecast) {
       return Response.json(
-        { message: "요청한 경기 시간대의 예보가 아직 제공되지 않았습니다." },
-        { status: 404 },
+        { message: "최신 예보 캐시를 준비하고 있어요. 잠시 후 다시 확인해 주세요." },
+        { status: 503 },
       );
     }
 
@@ -43,15 +47,11 @@ export async function GET(request: Request) {
     }
 
     return Response.json(
-      { stadium, forecast: gameForecast, risk, history, issuedAt: forecast.issuedAt },
-      { headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=600" } },
+      { stadium, forecast: gameForecast, risk, history, issuedAt: gameForecast.issuedAt.toISOString() },
+      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=300" } },
     );
   } catch (error) {
-    if (error instanceof KmaConfigurationError) {
-      return Response.json({ message: error.message }, { status: 503 });
-    }
-
-    console.error("기상청 예보 조회 실패", error);
-    return Response.json({ message: "기상청 예보를 불러오지 못했습니다." }, { status: 502 });
+    console.error("기상청 예보 캐시 조회 실패", error);
+    return Response.json({ message: "기상청 예보 캐시를 불러오지 못했습니다." }, { status: 502 });
   }
 }
