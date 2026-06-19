@@ -18,8 +18,9 @@ type WeatherResponse = {
 };
 
 export default function Home() {
-  const today = useMemo(() => getKoreanDate(), []);
+  const dateOptions = useMemo(() => getKoreanDateOptions(), []);
   const [games, setGames] = useState<KboGame[]>([]);
+  const [selectedDate, setSelectedDate] = useState(dateOptions[0].date);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [isGamesLoading, setIsGamesLoading] = useState(true);
@@ -27,7 +28,8 @@ export default function Home() {
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
 
-  const selectedGame = games.find((game) => game.id === selectedGameId) ?? null;
+  const gamesForSelectedDate = games.filter((game) => game.date === selectedDate);
+  const selectedGame = gamesForSelectedDate.find((game) => game.id === selectedGameId) ?? gamesForSelectedDate[0] ?? null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -35,17 +37,27 @@ export default function Home() {
     async function loadGames() {
       try {
         setIsGamesLoading(true);
-        const response = await fetch(`/api/games?year=${today.year}&month=${today.month}`, {
-          signal: controller.signal,
-        });
-        const data = (await response.json()) as { games?: KboGame[]; message?: string };
-        if (!response.ok || !data.games) throw new Error(data.message ?? "경기 일정을 불러오지 못했습니다.");
-
-        const upcomingGames = data.games
-          .filter((game) => game.status === "scheduled" && game.date >= today.date)
-          .slice(0, 5);
+        const months = Array.from(
+          new Map(dateOptions.map((option) => [`${option.year}-${option.month}`, option])).values(),
+        );
+        const responses = await Promise.all(
+          months.map((option) =>
+            fetch(`/api/games?year=${option.year}&month=${option.month}`, { signal: controller.signal }),
+          ),
+        );
+        const datasets = await Promise.all(
+          responses.map(async (response) => {
+            const data = (await response.json()) as { games?: KboGame[]; message?: string };
+            if (!response.ok || !data.games) throw new Error(data.message ?? "경기 일정을 불러오지 못했습니다.");
+            return data.games;
+          }),
+        );
+        const availableDates = new Set(dateOptions.map((option) => option.date));
+        const upcomingGames = datasets
+          .flat()
+          .filter((game) => game.status === "scheduled" && availableDates.has(game.date));
         setGames(upcomingGames);
-        setSelectedGameId(upcomingGames[0]?.id ?? null);
+        setSelectedGameId(upcomingGames.find((game) => game.date === dateOptions[0].date)?.id ?? null);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setGamesError(error instanceof Error ? error.message : "경기 일정을 불러오지 못했습니다.");
@@ -56,7 +68,7 @@ export default function Home() {
 
     void loadGames();
     return () => controller.abort();
-  }, [today]);
+  }, [dateOptions]);
 
   useEffect(() => {
     const game = selectedGame;
@@ -108,16 +120,37 @@ export default function Home() {
         </header>
 
         <section aria-label="경기 선택" className="mb-5">
-          <p className="mb-3 text-sm font-semibold">가장 가까운 경기를 골라보세요</p>
+          <p className="mb-3 text-sm font-semibold">언제 직관을 가나요?</p>
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            {dateOptions.map((option) => {
+              const isSelected = option.date === selectedDate;
+              return (
+                <button
+                  key={option.date}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(option.date);
+                    setSelectedGameId(games.find((game) => game.date === option.date)?.id ?? null);
+                  }}
+                  className={`rounded-2xl border px-3 py-3 text-left transition ${
+                    isSelected ? "border-[#182017] bg-[#182017] text-white" : "border-[#dfe3db] bg-white text-[#596157]"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className={`mt-0.5 block text-xs ${isSelected ? "text-white/70" : "text-[#8a9388]"}`}>{option.shortDate}</span>
+                </button>
+              );
+            })}
+          </div>
           {isGamesLoading ? (
             <div className="h-11 animate-pulse rounded-full bg-[#e6eae3]" />
           ) : gamesError ? (
             <p className="rounded-2xl bg-[#fff0ed] px-4 py-3 text-sm text-[#9d3728]">{gamesError}</p>
-          ) : games.length === 0 ? (
-            <p className="rounded-2xl bg-white px-4 py-3 text-sm text-[#687167]">예정된 경기가 없어요.</p>
+          ) : gamesForSelectedDate.length === 0 ? (
+            <p className="rounded-2xl bg-white px-4 py-3 text-sm text-[#687167]">이 날짜에는 예정된 경기가 없어요.</p>
           ) : (
             <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
-              {games.map((game) => {
+              {gamesForSelectedDate.map((game) => {
                 const isSelected = game.id === selectedGameId;
                 return (
                   <button
@@ -253,15 +286,29 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function getKoreanDate() {
+function getKoreanDateOptions() {
+  const today = getKoreanDate(new Date());
+  const todayAt = new Date(`${today.date}T00:00:00+09:00`);
+  return ["오늘", "내일", "모레"].map((label, offset) => {
+    const date = getKoreanDate(new Date(todayAt.getTime() + offset * 86_400_000));
+    return { ...date, label, shortDate: `${Number(date.month)}.${Number(date.day)}` };
+  });
+}
+
+function getKoreanDate(now: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts();
+  }).formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)!.value;
-  return { year: value("year"), month: value("month"), date: `${value("year")}-${value("month")}-${value("day")}` };
+  return {
+    year: value("year"),
+    month: value("month"),
+    day: value("day"),
+    date: `${value("year")}-${value("month")}-${value("day")}`,
+  };
 }
 
 function formatDateLabel(date: string) {

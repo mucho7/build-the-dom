@@ -1,5 +1,5 @@
 import { isDatabaseConfigured } from "@/lib/db";
-import { refreshTodayGameForecasts } from "@/lib/weather-cache-sync";
+import { refreshUpcomingGameForecasts } from "@/lib/weather-cache-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await refreshTodayGameForecasts();
+    const result = await refreshUpcomingGameForecasts();
     return Response.json({ ...result, refreshedAt: new Date().toISOString() });
   } catch (error) {
     console.error("날씨 캐시 갱신 실패", error);

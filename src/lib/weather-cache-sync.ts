@@ -9,19 +9,22 @@ export type WeatherCacheSyncResult = {
   failedGameIds: string[];
 };
 
-export async function refreshTodayGameForecasts(now = new Date()): Promise<WeatherCacheSyncResult> {
-  const { year, month, date } = getKoreanDate(now);
-  await syncKboScheduleMonth(year, month);
+export async function refreshUpcomingGameForecasts(now = new Date()): Promise<WeatherCacheSyncResult> {
+  const dates = getKoreanDateRange(now);
+  const targetMonths = Array.from(
+    new Map(dates.map((date) => [`${date.year}-${date.month}`, { year: date.year, month: date.month }])).values(),
+  );
+  await Promise.all(targetMonths.map(({ year, month }) => syncKboScheduleMonth(year, month)));
 
   const prisma = getPrisma();
   const games = await prisma.game.findMany({
     where: {
-      gameDate: new Date(`${date}T00:00:00.000Z`),
+      gameDate: { in: dates.map(({ date }) => new Date(`${date}T00:00:00.000Z`)) },
       status: GameStatus.SCHEDULED,
     },
     include: { stadium: true },
     orderBy: { startTime: "asc" },
-    take: 5,
+    take: 15,
   });
   const results = await Promise.allSettled(games.map((game) => cacheGameForecast(game)));
   const failedGameIds = results.flatMap((result, index) =>
@@ -68,6 +71,12 @@ async function cacheGameForecast(game: {
   });
 }
 
+function getKoreanDateRange(now: Date) {
+  const start = getKoreanDate(now);
+  const startAt = new Date(`${start.date}T00:00:00+09:00`);
+  return Array.from({ length: 3 }, (_, offset) => getKoreanDate(new Date(startAt.getTime() + offset * 86_400_000)));
+}
+
 function getKoreanDate(now: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
@@ -76,5 +85,9 @@ function getKoreanDate(now: Date) {
     day: "2-digit",
   }).formatToParts(now);
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)!.value;
-  return { year: Number(value("year")), month: Number(value("month")), date: `${value("year")}-${value("month")}-${value("day")}` };
+  return {
+    year: Number(value("year")),
+    month: Number(value("month")),
+    date: `${value("year")}-${value("month")}-${value("day")}`,
+  };
 }
