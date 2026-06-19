@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GameStatus {
+  SCHEDULED
+  PLAYED
+  CANCELLED
+}
+
+enum CancellationReason {
+  RAIN
+  GROUND_CONDITION
+  FINE_DUST
+  OTHER
+}
+
+enum WeatherSnapshotKind {
+  FORECAST
+  OBSERVED
+}
+
+model Stadium {
+  id        String   @id
+  name      String   @unique
+  latitude  Float
+  longitude Float
+  isDome    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  games Game[]
+}
+
+model Game {
+  id             String     @id @default(cuid())
+  kboGameId      String     @unique
+  gameDate       DateTime   @db.Date
+  startTime      String
+  awayTeam       String
+  homeTeam       String
+  stadiumId      String
+  status         GameStatus
+  sourceText     String?
+  sourceUrl      String
+  collectedAt    DateTime   @default(now())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  stadium           Stadium           @relation(fields: [stadiumId], references: [id])
+  cancellation      Cancellation?
+  weatherSnapshots  WeatherSnapshot[]
+
+  @@index([stadiumId, gameDate])
+  @@index([status, gameDate])
+}
+
+model Cancellation {
+  id        String             @id @default(cuid())
+  gameId    String             @unique
+  reason    CancellationReason
+  sourceText String?
+  createdAt DateTime           @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}
+
+model WeatherSnapshot {
+  id                       String              @id @default(cuid())
+  gameId                   String
+  kind                     WeatherSnapshotKind
+  issuedAt                 DateTime?
+  forecastFor              DateTime
+  precipitationProbability Int?
+  precipitationAmountMm    Float?
+  precipitationType        String?
+  humidity                 Int?
+  temperature              Float?
+  createdAt                DateTime            @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, kind, forecastFor, issuedAt])
+  @@index([forecastFor])
+}
+
+model SyncRun {
+  id          String   @id @default(cuid())
+  source      String
+  targetYear  Int
+  targetMonth Int
+  status      String
+  recordCount Int      @default(0)
+  error       String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+
+  @@index([source, startedAt])
+}
