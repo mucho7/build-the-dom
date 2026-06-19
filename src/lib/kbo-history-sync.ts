@@ -1,7 +1,7 @@
 import { CancellationReason, GameStatus } from "@/generated/prisma/client";
 import { getStadiumByKboName, stadiums } from "@/data/stadiums";
 import { fetchKboSchedule, type KboGame } from "@/lib/kbo-schedule";
-import { prisma } from "@/lib/db";
+import { getPrisma } from "@/lib/db";
 
 export type KboSyncResult = {
   totalGames: number;
@@ -10,6 +10,7 @@ export type KboSyncResult = {
 };
 
 export async function syncKboScheduleMonth(year: number, month: number): Promise<KboSyncResult> {
+  const prisma = getPrisma();
   const syncRun = await prisma.syncRun.create({
     data: { source: "KBO", targetYear: year, targetMonth: month, status: "RUNNING" },
   });
@@ -66,6 +67,7 @@ export async function syncKboScheduleMonth(year: number, month: number): Promise
 }
 
 async function upsertGame(game: KboGame, stadiumId: string) {
+  const prisma = getPrisma();
   const data = {
     gameDate: new Date(`${game.date}T00:00:00.000Z`),
     startTime: game.startTime,

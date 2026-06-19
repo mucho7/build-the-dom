@@ -12,6 +12,12 @@ function createPrismaClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+export function isDatabaseConfigured() {
+  return Boolean(process.env.DATABASE_URL);
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export function getPrisma() {
+  const prisma = globalForPrisma.prisma ?? createPrismaClient();
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  return prisma;
+}

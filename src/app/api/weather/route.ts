@@ -1,6 +1,7 @@
 import { getStadium } from "@/data/stadiums";
+import { getHistoricalRainoutStats } from "@/lib/historical-rainout";
 import { fetchStadiumForecast, getRiskForecast, KmaConfigurationError } from "@/lib/kma-forecast";
-import { calculateRainoutRisk } from "@/lib/risk";
+import { applyHistoricalRainoutAdjustment, calculateRainoutRisk } from "@/lib/risk";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +28,22 @@ export async function GET(request: Request) {
       );
     }
 
-    const risk = calculateRainoutRisk({
+    let risk = calculateRainoutRisk({
       isDome: stadium.isDome,
       precipitationProbability: gameForecast.precipitationProbability,
       precipitationAmountMm: gameForecast.precipitationAmountMm,
       rainBeforeGame: gameForecast.rainBeforeGame,
     });
+    let history = null;
+    try {
+      history = await getHistoricalRainoutStats(stadium.id, `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`);
+      if (history) risk = applyHistoricalRainoutAdjustment(risk, history, stadium.isDome);
+    } catch (error) {
+      console.warn("우천취소 이력 보정 생략", error);
+    }
 
     return Response.json(
-      { stadium, forecast: gameForecast, risk, issuedAt: forecast.issuedAt },
+      { stadium, forecast: gameForecast, risk, history, issuedAt: forecast.issuedAt },
       { headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=600" } },
     );
   } catch (error) {

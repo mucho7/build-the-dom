@@ -14,6 +14,7 @@ type WeatherResponse = {
     rainBeforeGame: boolean;
   };
   risk: RiskAssessment;
+  history: { totalGames: number; rainCancelledGames: number; rainoutRate: number } | null;
 };
 
 export default function Home() {
@@ -206,6 +207,7 @@ function RiskCard({
               <p className="mt-6 text-sm font-semibold text-[#d9f071]">{assessment.label}</p>
               <h3 className="mt-2 text-[34px] font-bold tracking-[-0.075em]">{assessment.headline}</h3>
               <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-6 text-[#d8e5d6]">{assessment.summary}</p>
+              {assessment.historicalNote && <p className="mt-3 text-xs text-[#c8d8c6]">{assessment.historicalNote}</p>}
             </>
           ) : null}
         </div>
