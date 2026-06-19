@@ -1,7 +1,7 @@
 import type { Stadium } from "@/data/stadiums";
 
 const KMA_FORECAST_ENDPOINT =
-  "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
+  "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getVilageFcst";
 const BASE_TIMES = ["2300", "2000", "1700", "1400", "1100", "0800", "0500", "0200"];
 
 export type HourlyForecast = {
@@ -32,14 +32,14 @@ export async function fetchStadiumForecast(
   stadium: Stadium,
   now = new Date(),
 ): Promise<{ issuedAt: string; hours: HourlyForecast[] }> {
-  const serviceKey = process.env.KMA_SERVICE_KEY;
-  if (!serviceKey) throw new KmaConfigurationError();
+  const authKey = process.env.KMA_AUTH_KEY;
+  if (!authKey) throw new KmaConfigurationError();
 
   const { baseDate, baseTime } = getLatestBaseTime(now);
   const grid = toKmaGrid(stadium.latitude, stadium.longitude);
   const url = new URL(KMA_FORECAST_ENDPOINT);
   url.search = new URLSearchParams({
-    serviceKey,
+    authKey,
     pageNo: "1",
     numOfRows: "1000",
     dataType: "JSON",
@@ -176,6 +176,6 @@ function toKmaGrid(latitude: number, longitude: number) {
 
 export class KmaConfigurationError extends Error {
   constructor() {
-    super("KMA_SERVICE_KEY 환경 변수가 설정되지 않았습니다.");
+    super("KMA_AUTH_KEY 환경 변수가 설정되지 않았습니다.");
   }
 }
