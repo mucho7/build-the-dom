@@ -12,6 +12,7 @@
     "db:studio": "prisma studio",
     "sync:kbo": "tsx src/scripts/sync-kbo.ts",
     "sync:kbo-history": "tsx src/scripts/sync-kbo-history.ts",
+    "sync:kbo-weather-history": "tsx src/scripts/sync-kbo-weather-history.ts",
     "sync:weather": "tsx src/scripts/sync-weather.ts",
     "postinstall": "prisma generate"
   },

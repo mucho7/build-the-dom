@@ -1,10 +1,11 @@
 import { CancellationReason, GameStatus } from "@/generated/prisma/client";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db";
-import type { HistoricalRainoutStats } from "@/lib/risk";
+import type { HistoricalRainoutStats, RiskInput } from "@/lib/risk";
 
 export async function getHistoricalRainoutStats(
   stadiumId: string,
   referenceDate: string,
+  currentWeather: Pick<RiskInput, "precipitationProbability" | "precipitationAmountMm" | "rainBeforeGame">,
 ): Promise<HistoricalRainoutStats | null> {
   if (!isDatabaseConfigured()) return null;
 
@@ -18,16 +19,49 @@ export async function getHistoricalRainoutStats(
     gameDate: { gte: since, lt: reference },
     status: { in: [GameStatus.PLAYED, GameStatus.CANCELLED] },
   };
-  const [totalGames, rainCancelledGames] = await Promise.all([
-    prisma.game.count({ where: completedGames }),
-    prisma.game.count({
-      where: {
-        ...completedGames,
-        cancellation: { is: { reason: CancellationReason.RAIN } },
+  const games = await prisma.game.findMany({
+    where: completedGames,
+    include: {
+      cancellation: true,
+      weatherSnapshots: {
+        where: { kind: "OBSERVED" },
+        orderBy: { issuedAt: "desc" },
+        take: 1,
       },
-    }),
-  ]);
+    },
+  });
+  const similarGames = games.filter((game) => {
+    const forecast = game.weatherSnapshots[0];
+    return forecast ? isSimilarWeather(forecast, currentWeather) : false;
+  });
+  const rainCancelledGames = similarGames.filter(
+    (game) => game.cancellation?.reason === CancellationReason.RAIN,
+  ).length;
 
-  if (totalGames === 0) return null;
-  return { totalGames, rainCancelledGames, rainoutRate: rainCancelledGames / totalGames };
+  if (similarGames.length === 0) return null;
+  return {
+    similarGames: similarGames.length,
+    similarRainCancelledGames: rainCancelledGames,
+    rainoutRate: rainCancelledGames / similarGames.length,
+    criteria: {
+      precipitationAmount: getPrecipitationBand(currentWeather.precipitationAmountMm),
+      rainBeforeGame: currentWeather.rainBeforeGame,
+    },
+  };
+}
+
+function isSimilarWeather(
+  forecast: { precipitationProbability: number | null; precipitationAmountMm: number | null; rainedBeforeGame: boolean },
+  current: Pick<RiskInput, "precipitationProbability" | "precipitationAmountMm" | "rainBeforeGame">,
+) {
+  const precipitationMatch = getPrecipitationBand(forecast.precipitationAmountMm ?? 0) === getPrecipitationBand(current.precipitationAmountMm);
+  const beforeGameMatch = forecast.rainedBeforeGame === current.rainBeforeGame;
+  return precipitationMatch && beforeGameMatch;
+}
+
+function getPrecipitationBand(value: number) {
+  if (value === 0) return "강수 없음";
+  if (value < 1) return "1mm 미만";
+  if (value < 5) return "1~4.9mm";
+  return "5mm 이상";
 }

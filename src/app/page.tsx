@@ -14,7 +14,7 @@ type WeatherResponse = {
     rainBeforeGame: boolean;
   };
   risk: RiskAssessment;
-  history: { totalGames: number; rainCancelledGames: number; rainoutRate: number } | null;
+  history: { similarGames: number; similarRainCancelledGames: number; rainoutRate: number } | null;
 };
 
 export default function Home() {

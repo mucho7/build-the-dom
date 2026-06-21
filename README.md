@@ -1,36 +1,36 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 우취될까?
 
-## Getting Started
+KBO 경기를 고르면 오늘·내일·모레의 기상청 예보와 우천취소 이력을 바탕으로 직관하기 좋은 날인지 알려주는 서비스입니다.
 
-First, run the development server:
+## 로컬 실행
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local`에 PostgreSQL 연결 정보와 기상청 단기예보 키(`KMA_AUTH_KEY`)를 입력한 뒤, 현재 예보 캐시를 채웁니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run db:migrate
+npm run sync:weather
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 비슷한 날씨 기반 우천취소 이력
 
-## Learn More
+현재 경기의 `예상 강수량`과 `경기 전 6시간 내 비 여부`가 모두 같은 과거 경기만 비교합니다. 화면에는 다음처럼 표시됩니다.
 
-To learn more about Next.js, take a look at the following resources:
+> 최근 3년간 예상 강수량과 경기 전 비가 비슷했던 12경기 중 3경기가 우천취소됐어요.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+과거 기상은 단기예보 API로 되돌려 받을 수 없으므로, 공공데이터포털의 **기상청 지상(종관, ASOS) 시간자료 조회서비스**를 별도로 신청해 인증키를 발급받아야 합니다. 발급받은 키를 `.env.local`의 `KMA_ASOS_SERVICE_KEY`에 입력한 뒤 아래 명령을 실행합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# 한 경기로 연결 확인
+npm run sync:kbo-weather-history -- 1
 
-## Deploy on Vercel
+# 최근 3년 완료 경기 전체 적재
+npm run sync:kbo-weather-history
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+과거 관측값은 구장별 가장 가까운 ASOS 관측소의 경기 시작 시각 및 직전 6시간 자료를 사용합니다. 이력 적재가 끝나기 전에는 비슷한 날씨 통계 문구를 표시하지 않습니다.

@@ -18,9 +18,13 @@ export type RiskAssessment = {
 };
 
 export type HistoricalRainoutStats = {
-  totalGames: number;
-  rainCancelledGames: number;
+  similarGames: number;
+  similarRainCancelledGames: number;
   rainoutRate: number;
+  criteria: {
+    precipitationAmount: string;
+    rainBeforeGame: boolean;
+  };
 };
 
 export function calculateRainoutRisk(input: RiskInput): RiskAssessment {
@@ -94,11 +98,11 @@ export function applyHistoricalRainoutAdjustment(
   history: HistoricalRainoutStats,
   isDome: boolean,
 ): RiskAssessment {
-  if (isDome || history.totalGames < 10) return assessment;
+  if (isDome) return assessment;
 
   const rate = history.rainoutRate;
-  const adjustment = rate >= 0.12 ? 12 : rate >= 0.07 ? 7 : rate <= 0.02 ? -3 : 0;
-  const historicalNote = `최근 3년 완료 경기 ${history.totalGames}건 중 ${history.rainCancelledGames}건이 우천취소됐어요.`;
+  const adjustment = history.similarGames >= 5 ? (rate >= 0.5 ? 12 : rate >= 0.25 ? 7 : rate === 0 ? -3 : 0) : 0;
+  const historicalNote = `최근 3년간 예상 강수량과 경기 전 비가 비슷했던 ${history.similarGames}경기 중 ${history.similarRainCancelledGames}경기가 우천취소됐어요.`;
   const score = Math.max(0, Math.min(100, assessment.score + adjustment));
   const level = getRiskLevel(score);
 

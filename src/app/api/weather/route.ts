@@ -40,7 +40,15 @@ export async function GET(request: Request) {
     });
     let history = null;
     try {
-      history = await getHistoricalRainoutStats(stadium.id, `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`);
+      history = await getHistoricalRainoutStats(
+        stadium.id,
+        `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+        {
+          precipitationProbability: gameForecast.precipitationProbability,
+          precipitationAmountMm: gameForecast.precipitationAmountMm,
+          rainBeforeGame: gameForecast.rainBeforeGame,
+        },
+      );
       if (history) risk = applyHistoricalRainoutAdjustment(risk, history, stadium.isDome);
     } catch (error) {
       console.warn("우천취소 이력 보정 생략", error);
