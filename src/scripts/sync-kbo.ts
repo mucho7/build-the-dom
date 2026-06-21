@@ -11,19 +11,23 @@ if (month < 1 || month > 12) {
   throw new Error("월은 1부터 12 사이의 숫자여야 합니다.");
 }
 
-const { syncKboScheduleMonth } = await import("../lib/kbo-history-sync");
-const result = await syncKboScheduleMonth(year, month);
+async function main() {
+  const { syncKboScheduleMonth } = await import("../lib/kbo-history-sync");
+  const result = await syncKboScheduleMonth(year, month);
 
-console.log(
-  JSON.stringify(
-    {
-      year,
-      month,
-      totalGames: result.totalGames,
-      savedGames: result.savedGames,
-      skippedGames: result.skippedGames,
-    },
-    null,
-    2,
-  ),
-);
+  console.log(
+    JSON.stringify(
+      {
+        year,
+        month,
+        totalGames: result.totalGames,
+        savedGames: result.savedGames,
+        skippedGames: result.skippedGames,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+void main();
