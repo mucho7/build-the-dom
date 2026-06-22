@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getStadiumByKboName } from "@/data/stadiums";
 import type { KboGame } from "@/lib/kbo-schedule";
 import type { RiskAssessment } from "@/lib/risk";
 
@@ -24,12 +23,15 @@ export default function Home() {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [isGamesLoading, setIsGamesLoading] = useState(true);
-  const [weather, setWeather] = useState<WeatherResponse | null>(null);
-  const [weatherError, setWeatherError] = useState<string | null>(null);
-  const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+  const [weatherByDate, setWeatherByDate] = useState<Record<string, Record<string, WeatherResponse>>>({});
+  const [weatherErrors, setWeatherErrors] = useState<Record<string, string>>({});
+  const [loadingWeatherDate, setLoadingWeatherDate] = useState<string | null>(null);
 
   const gamesForSelectedDate = games.filter((game) => game.date === selectedDate);
   const selectedGame = gamesForSelectedDate.find((game) => game.id === selectedGameId) ?? gamesForSelectedDate[0] ?? null;
+  const weather = selectedGame ? weatherByDate[selectedDate]?.[selectedGame.id] ?? null : null;
+  const weatherError = selectedGame && weatherByDate[selectedDate] ? weatherErrors[selectedDate] ?? (weather ? null : "최신 예보 캐시를 준비하고 있어요. 잠시 후 다시 확인해 주세요.") : weatherErrors[selectedDate] ?? null;
+  const isWeatherLoading = Boolean(selectedGame) && loadingWeatherDate === selectedDate && !weatherByDate[selectedDate];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,40 +73,28 @@ export default function Home() {
   }, [dateOptions]);
 
   useEffect(() => {
-    const game = selectedGame;
-    if (!game) return;
+    if (weatherByDate[selectedDate] || loadingWeatherDate === selectedDate) return;
 
     const controller = new AbortController();
-    async function loadWeather(selected: KboGame) {
-      const stadium = getStadiumByKboName(selected.stadium);
-      if (!stadium) {
-        setWeather(null);
-        setWeatherError("이 구장의 예보 위치를 아직 준비하고 있어요.");
-        return;
-      }
-
+    async function loadDateWeather() {
       try {
-        setIsWeatherLoading(true);
-        setWeatherError(null);
-        setWeather(null);
-        const response = await fetch(
-          `/api/weather?stadium=${stadium.id}&date=${selected.date.replaceAll("-", "")}&time=${selected.startTime}`,
-          { signal: controller.signal },
-        );
-        const data = (await response.json()) as WeatherResponse & { message?: string };
-        if (!response.ok) throw new Error(data.message ?? "예보를 불러오지 못했습니다.");
-        setWeather(data);
+        setLoadingWeatherDate(selectedDate);
+        setWeatherErrors((current) => ({ ...current, [selectedDate]: "" }));
+        const response = await fetch(`/api/weather?date=${selectedDate.replaceAll("-", "")}`, { signal: controller.signal });
+        const data = (await response.json()) as { weatherByGameId?: Record<string, WeatherResponse>; message?: string };
+        if (!response.ok || !data.weatherByGameId) throw new Error(data.message ?? "예보를 불러오지 못했습니다.");
+        setWeatherByDate((current) => ({ ...current, [selectedDate]: data.weatherByGameId! }));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setWeatherError(error instanceof Error ? error.message : "예보를 불러오지 못했습니다.");
+        setWeatherErrors((current) => ({ ...current, [selectedDate]: error instanceof Error ? error.message : "예보를 불러오지 못했습니다." }));
       } finally {
-        if (!controller.signal.aborted) setIsWeatherLoading(false);
+        if (!controller.signal.aborted) setLoadingWeatherDate((current) => current === selectedDate ? null : current);
       }
     }
 
-    void loadWeather(game);
+    void loadDateWeather();
     return () => controller.abort();
-  }, [selectedGame]);
+  }, [selectedDate, weatherByDate, loadingWeatherDate]);
 
   return (
     <main className="min-h-screen bg-[#f6f7f4] px-5 py-6 text-[#182017] sm:px-8 sm:py-10">
