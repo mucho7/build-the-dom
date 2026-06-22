@@ -288,7 +288,7 @@ function EmptyCard() {
   return (
     <section className="rounded-[28px] bg-white px-6 py-12 text-center shadow-sm">
       <div className="text-4xl">⚾</div>
-      <h2 className="mt-5 text-xl font-bold tracking-[-0.05em]">확인할 경기를 골라주세요</h2>
+      <h2 className="mt-5 text-xl font-bold tracking-tighter">확인할 경기를 골라주세요</h2>
       <p className="mt-2 text-sm leading-6 text-[#687167]">예정된 경기가 보이면 직관 판단을 바로 알려드릴게요.</p>
     </section>
   );
@@ -296,7 +296,7 @@ function EmptyCard() {
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="py-5 text-center [&:not(:last-child)]:border-r [&:not(:last-child)]:border-white/15">
+    <div className="py-5 text-center not-last:border-r not-last:border-white/15">
       <p className="text-xs text-[#b7cbb7]">{label}</p>
       <p className="mt-1.5 text-sm font-semibold">{value}</p>
     </div>
