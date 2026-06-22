@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import type { KboGame } from "@/lib/kbo-schedule";
 import type { RiskAssessment } from "@/lib/risk";
 
@@ -205,7 +204,7 @@ function RiskCard({
         assessment.level
       ]
     : "bg-[#48514a]";
-  const statusVisual = getStatusVisual(game.status, assessment?.level, weather?.stadium.isDome ?? false);
+  const icon = assessment?.level === "risky" ? "🌧️" : assessment?.level === "caution" ? "🌦️" : assessment?.level === "prepare" ? "🌂" : "🌤️";
 
   return (
     <>
@@ -223,18 +222,10 @@ function RiskCard({
           </div>
         </div>
 
-        <div className="flex h-[420px] flex-col items-center px-6 py-9 text-center">
-          {isLoading ? (
-            <div className="size-28 shrink-0 animate-pulse rounded-[28px] bg-white/15" />
-          ) : (
-            <Image
-              src={statusVisual.src}
-              alt={statusVisual.alt}
-              width={112}
-              height={112}
-              className="size-28 shrink-0 rounded-[28px] object-cover shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
-            />
-          )}
+        <div className="flex h-[372px] flex-col items-center px-6 py-9 text-center">
+          <div className={`mx-auto flex size-20 shrink-0 items-center justify-center rounded-full bg-[#d9f071] text-4xl shadow-[0_8px_22px_rgba(0,0,0,0.14)] ${isLoading ? "animate-pulse" : ""}`}>
+            {isLoading ? <span className="size-8 rounded-full bg-[#183b2a]/15" /> : icon}
+          </div>
           {isLoading ? (
             <div className="mt-6 flex min-h-[132px] w-full flex-col items-center" aria-label="예보 판단을 불러오는 중">
               <div className="h-4 w-24 animate-pulse rounded-full bg-white/15" />
@@ -310,18 +301,6 @@ function Fact({ label, value }: { label: string; value: string }) {
       <p className="mt-1.5 text-sm font-semibold">{value}</p>
     </div>
   );
-}
-
-function getStatusVisual(
-  gameStatus: KboGame["status"],
-  level: RiskAssessment["level"] | undefined,
-  isDome: boolean,
-) {
-  if (gameStatus === "cancelled") return { src: "/status/cancelled.png", alt: "이미 우천 취소된 경기" };
-  if (isDome) return { src: "/status/dome.png", alt: "돔구장 경기" };
-  if (level === "risky") return { src: "/status/risky.png", alt: "강한 우천 우려" };
-  if (level === "prepare" || level === "caution") return { src: "/status/caution.png", alt: "약간의 우천 우려" };
-  return { src: "/status/safe.png", alt: "우천취소 염려 없음" };
 }
 
 function getKoreanDateOptions() {
