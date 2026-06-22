@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KboGame } from "@/lib/kbo-schedule";
 import type { RiskAssessment } from "@/lib/risk";
 
@@ -26,6 +26,8 @@ export default function Home() {
   const [weatherByDate, setWeatherByDate] = useState<Record<string, Record<string, WeatherResponse>>>({});
   const [weatherErrors, setWeatherErrors] = useState<Record<string, string>>({});
   const [loadingWeatherDate, setLoadingWeatherDate] = useState<string | null>(null);
+  const weatherByDateRef = useRef<Record<string, Record<string, WeatherResponse>>>({});
+  const loadingWeatherDateRef = useRef<string | null>(null);
 
   const gamesForSelectedDate = games.filter((game) => game.date === selectedDate);
   const selectedGame = gamesForSelectedDate.find((game) => game.id === selectedGameId) ?? gamesForSelectedDate[0] ?? null;
@@ -73,28 +75,33 @@ export default function Home() {
   }, [dateOptions]);
 
   useEffect(() => {
-    if (weatherByDate[selectedDate] || loadingWeatherDate === selectedDate) return;
+    if (weatherByDateRef.current[selectedDate] || loadingWeatherDateRef.current === selectedDate) return;
 
     const controller = new AbortController();
     async function loadDateWeather() {
       try {
+        loadingWeatherDateRef.current = selectedDate;
         setLoadingWeatherDate(selectedDate);
         setWeatherErrors((current) => ({ ...current, [selectedDate]: "" }));
         const response = await fetch(`/api/weather?date=${selectedDate.replaceAll("-", "")}`, { signal: controller.signal });
         const data = (await response.json()) as { weatherByGameId?: Record<string, WeatherResponse>; message?: string };
         if (!response.ok || !data.weatherByGameId) throw new Error(data.message ?? "예보를 불러오지 못했습니다.");
+        weatherByDateRef.current = { ...weatherByDateRef.current, [selectedDate]: data.weatherByGameId };
         setWeatherByDate((current) => ({ ...current, [selectedDate]: data.weatherByGameId! }));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setWeatherErrors((current) => ({ ...current, [selectedDate]: error instanceof Error ? error.message : "예보를 불러오지 못했습니다." }));
       } finally {
-        if (!controller.signal.aborted) setLoadingWeatherDate((current) => current === selectedDate ? null : current);
+        if (!controller.signal.aborted) {
+          loadingWeatherDateRef.current = null;
+          setLoadingWeatherDate((current) => current === selectedDate ? null : current);
+        }
       }
     }
 
     void loadDateWeather();
     return () => controller.abort();
-  }, [selectedDate, weatherByDate, loadingWeatherDate]);
+  }, [selectedDate]);
 
   return (
     <main className="min-h-screen bg-[#f6f7f4] px-5 py-6 text-[#182017] sm:px-8 sm:py-10">
