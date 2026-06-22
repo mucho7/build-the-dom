@@ -55,9 +55,25 @@ model Game {
   stadium           Stadium           @relation(fields: [stadiumId], references: [id])
   cancellation      Cancellation?
   weatherSnapshots  WeatherSnapshot[]
+  historicalRainout HistoricalRainout?
 
   @@index([stadiumId, gameDate])
   @@index([status, gameDate])
+}
+
+model HistoricalRainout {
+  id                       String   @id @default(cuid())
+  gameId                   String   @unique
+  forecastIssuedAt         DateTime
+  similarGames             Int
+  similarRainCancelledGames Int
+  precipitationAmountBand  String
+  rainedBeforeGame         Boolean
+  calculatedAt             DateTime @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([forecastIssuedAt])
 }
 
 model Cancellation {

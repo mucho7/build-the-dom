@@ -1,5 +1,6 @@
 import { GameStatus, WeatherSnapshotKind } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/db";
+import { getHistoricalRainoutStats, getPrecipitationBand } from "@/lib/historical-rainout";
 import { syncKboScheduleMonth } from "@/lib/kbo-history-sync";
 import { fetchStadiumForecast, getRiskForecast } from "@/lib/kma-forecast";
 
@@ -36,6 +37,7 @@ export async function refreshUpcomingGameForecasts(now = new Date()): Promise<We
 
 async function cacheGameForecast(game: {
   id: string;
+  stadiumId: string;
   gameDate: Date;
   startTime: string;
   stadium: { latitude: number; longitude: number };
@@ -68,6 +70,40 @@ async function cacheGameForecast(game: {
     },
     create: { gameId: game.id, kind: WeatherSnapshotKind.FORECAST, forecastFor, issuedAt, ...data },
     update: data,
+  });
+
+  const historicalRainout = await getHistoricalRainoutStats(
+    game.stadiumId,
+    `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+    {
+      precipitationProbability: gameForecast.precipitationProbability,
+      precipitationAmountMm: gameForecast.precipitationAmountMm,
+      rainBeforeGame: gameForecast.rainBeforeGame,
+    },
+  );
+
+  if (!historicalRainout) {
+    await prisma.historicalRainout.deleteMany({ where: { gameId: game.id } });
+    return;
+  }
+
+  await prisma.historicalRainout.upsert({
+    where: { gameId: game.id },
+    create: {
+      gameId: game.id,
+      forecastIssuedAt: issuedAt,
+      similarGames: historicalRainout.similarGames,
+      similarRainCancelledGames: historicalRainout.similarRainCancelledGames,
+      precipitationAmountBand: getPrecipitationBand(gameForecast.precipitationAmountMm),
+      rainedBeforeGame: gameForecast.rainBeforeGame,
+    },
+    update: {
+      forecastIssuedAt: issuedAt,
+      similarGames: historicalRainout.similarGames,
+      similarRainCancelledGames: historicalRainout.similarRainCancelledGames,
+      precipitationAmountBand: getPrecipitationBand(gameForecast.precipitationAmountMm),
+      rainedBeforeGame: gameForecast.rainBeforeGame,
+    },
   });
 }
 

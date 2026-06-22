@@ -59,7 +59,7 @@ function isSimilarWeather(
   return precipitationMatch && beforeGameMatch;
 }
 
-function getPrecipitationBand(value: number) {
+export function getPrecipitationBand(value: number) {
   if (value === 0) return "강수 없음";
   if (value < 1) return "1mm 미만";
   if (value < 5) return "1~4.9mm";

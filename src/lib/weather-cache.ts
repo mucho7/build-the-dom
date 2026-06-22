@@ -1,5 +1,6 @@
 import { WeatherSnapshotKind } from "@/generated/prisma/client";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db";
+import type { HistoricalRainoutStats } from "@/lib/risk";
 
 export type CachedGameForecast = {
   issuedAt: Date;
@@ -9,6 +10,7 @@ export type CachedGameForecast = {
   humidity: number | null;
   temperature: number | null;
   rainBeforeGame: boolean;
+  historicalRainout: HistoricalRainoutStats | null;
 };
 
 export async function getCachedGameForecast(
@@ -26,6 +28,7 @@ export async function getCachedGameForecast(
       startTime,
     },
     include: {
+      historicalRainout: true,
       weatherSnapshots: {
         where: { kind: WeatherSnapshotKind.FORECAST },
         orderBy: { issuedAt: "desc" },
@@ -36,6 +39,18 @@ export async function getCachedGameForecast(
   const snapshot = game?.weatherSnapshots[0];
   if (!snapshot) return null;
 
+  const historicalRainout = game.historicalRainout?.forecastIssuedAt.getTime() === snapshot.issuedAt.getTime()
+    ? {
+        similarGames: game.historicalRainout.similarGames,
+        similarRainCancelledGames: game.historicalRainout.similarRainCancelledGames,
+        rainoutRate: game.historicalRainout.similarRainCancelledGames / game.historicalRainout.similarGames,
+        criteria: {
+          precipitationAmount: game.historicalRainout.precipitationAmountBand,
+          rainBeforeGame: game.historicalRainout.rainedBeforeGame,
+        },
+      }
+    : null;
+
   return {
     issuedAt: snapshot.issuedAt,
     precipitationProbability: snapshot.precipitationProbability ?? 0,
@@ -44,5 +59,6 @@ export async function getCachedGameForecast(
     humidity: snapshot.humidity,
     temperature: snapshot.temperature,
     rainBeforeGame: snapshot.rainedBeforeGame,
+    historicalRainout,
   };
 }

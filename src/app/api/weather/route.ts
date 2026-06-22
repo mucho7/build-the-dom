@@ -1,6 +1,5 @@
 import { getStadium } from "@/data/stadiums";
 import { isDatabaseConfigured } from "@/lib/db";
-import { getHistoricalRainoutStats } from "@/lib/historical-rainout";
 import { getCachedGameForecast } from "@/lib/weather-cache";
 import { applyHistoricalRainoutAdjustment, calculateRainoutRisk } from "@/lib/risk";
 
@@ -38,21 +37,8 @@ export async function GET(request: Request) {
       precipitationAmountMm: gameForecast.precipitationAmountMm,
       rainBeforeGame: gameForecast.rainBeforeGame,
     });
-    let history = null;
-    try {
-      history = await getHistoricalRainoutStats(
-        stadium.id,
-        `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
-        {
-          precipitationProbability: gameForecast.precipitationProbability,
-          precipitationAmountMm: gameForecast.precipitationAmountMm,
-          rainBeforeGame: gameForecast.rainBeforeGame,
-        },
-      );
-      if (history) risk = applyHistoricalRainoutAdjustment(risk, history, stadium.isDome);
-    } catch (error) {
-      console.warn("우천취소 이력 보정 생략", error);
-    }
+    const history = gameForecast.historicalRainout;
+    if (history) risk = applyHistoricalRainoutAdjustment(risk, history, stadium.isDome);
 
     return Response.json(
       { stadium, forecast: gameForecast, risk, history, issuedAt: gameForecast.issuedAt.toISOString() },

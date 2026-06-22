@@ -17,7 +17,6 @@ export function isDatabaseConfigured() {
 }
 
 export function getPrisma() {
-  const prisma = globalForPrisma.prisma ?? createPrismaClient();
-  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-  return prisma;
+  globalForPrisma.prisma ??= createPrismaClient();
+  return globalForPrisma.prisma;
 }
