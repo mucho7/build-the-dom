@@ -34,3 +34,14 @@ npm run sync:kbo-weather-history
 ```
 
 과거 관측값은 구장별 가장 가까운 ASOS 관측소의 경기 시작 시각 및 직전 6시간 자료를 사용합니다. 이력 적재가 끝나기 전에는 비슷한 날씨 통계 문구를 표시하지 않습니다.
+
+## Vercel Hobby 배포와 예보 갱신
+
+Vercel Hobby는 시간 단위 크론을 지원하지 않으므로, 예보 캐시는 GitHub Actions가 매시 17분(UTC)에 갱신합니다. Vercel 배포 후 GitHub 저장소의 `Settings → Secrets and variables → Actions`에 다음을 추가합니다.
+
+| 구분 | 이름 | 값 |
+| --- | --- | --- |
+| Secret | `CRON_SECRET` | Vercel의 `CRON_SECRET`과 같은 값 |
+| Variable | `VERCEL_DEPLOYMENT_URL` | `https://프로젝트명.vercel.app` |
+
+Actions 탭의 **날씨 예보 캐시 갱신** 워크플로에서 `Run workflow`를 눌러 즉시 한 번 실행할 수 있습니다. 예약 실행은 GitHub의 부하에 따라 약간 늦어질 수 있습니다.

@@ -1,0 +1,20 @@
+name: 날씨 예보 캐시 갱신
+
+on:
+  schedule:
+    # GitHub Actions의 정각 부하를 피하기 위해 매시 17분(UTC)에 실행합니다.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh-weather:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vercel 예보 캐시 갱신 호출
+        env:
+          DEPLOYMENT_URL: ${{ vars.VERCEL_DEPLOYMENT_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 5 \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${DEPLOYMENT_URL}/api/cron/weather"
