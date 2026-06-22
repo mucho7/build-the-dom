@@ -84,14 +84,23 @@ export async function fetchHourlyObservations(stationId: string, from: Date, to:
     stnIds: stationId,
   }).toString();
 
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`기상청 관측자료 조회 실패: ${response.status}`);
-  const payload = (await response.json()) as AsosResponse;
-  const header = payload.response?.header;
-  if (header?.resultCode && header.resultCode !== "00") {
-    throw new Error(`기상청 관측자료 오류: ${header.resultMsg ?? header.resultCode}`);
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+      if (!response.ok) throw new Error(`기상청 관측자료 조회 실패: ${response.status}`);
+      const payload = (await response.json()) as AsosResponse;
+      const header = payload.response?.header;
+      if (header?.resultCode && header.resultCode !== "00") {
+        throw new Error(`기상청 관측자료 오류: ${header.resultMsg ?? header.resultCode}`);
+      }
+      return payload.response?.body?.items?.item ?? [];
+    } catch (error) {
+      lastError = error;
+      if (attempt < 3) await wait(attempt * 500);
+    }
   }
-  return payload.response?.body?.items?.item ?? [];
+  throw lastError;
 }
 
 function isRainy(item: AsosItem) {
@@ -122,4 +131,8 @@ function formatKstHour(date: Date) {
 function toKstDate(value: string | undefined) {
   if (!value) return new Date(0);
   return new Date(`${value.replace(" ", "T")}:00+09:00`);
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
