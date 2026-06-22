@@ -225,23 +225,30 @@ function RiskCard({
           </div>
         </div>
 
-        <div className="px-6 py-9 text-center">
-          <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-[#d9f071] text-4xl shadow-[0_8px_22px_rgba(0,0,0,0.14)]">{icon}</div>
+        <div className="flex h-[372px] flex-col items-center px-6 py-9 text-center">
+          <div className={`mx-auto flex size-20 shrink-0 items-center justify-center rounded-full bg-[#d9f071] text-4xl shadow-[0_8px_22px_rgba(0,0,0,0.14)] ${isLoading ? "animate-pulse" : ""}`}>
+            {isLoading ? <span className="size-8 rounded-full bg-[#183b2a]/15" /> : icon}
+          </div>
           {isLoading ? (
-            <p className="mt-6 text-sm text-[#d8e5d6]">경기 시간대 예보를 확인하고 있어요.</p>
+            <div className="mt-6 flex min-h-[132px] w-full flex-col items-center" aria-label="예보 판단을 불러오는 중">
+              <div className="h-4 w-24 animate-pulse rounded-full bg-white/15" />
+              <div className="mt-3 h-9 w-44 animate-pulse rounded-full bg-white/15" />
+              <div className="mt-5 h-4 w-full max-w-[280px] animate-pulse rounded-full bg-white/10" />
+              <div className="mt-2 h-4 w-4/5 max-w-[224px] animate-pulse rounded-full bg-white/10" />
+            </div>
           ) : error ? (
-            <>
-              <p className="mt-6 text-sm font-semibold text-[#ffe0a8]">예보 확인 필요</p>
+            <div className="mt-6 flex min-h-[132px] flex-col items-center">
+              <p className="text-sm font-semibold text-[#ffe0a8]">예보 확인 필요</p>
               <h3 className="mt-2 text-2xl font-bold tracking-[-0.055em]">아직 판단하기 어려워요</h3>
               <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-6 text-[#d8e5d6]">{error}</p>
-            </>
+            </div>
           ) : assessment ? (
-            <>
-              <p className="mt-6 text-sm font-semibold text-[#d9f071]">{assessment.label}</p>
+            <div className="mt-6 flex min-h-[132px] flex-col items-center">
+              <p className="text-sm font-semibold text-[#d9f071]">{assessment.label}</p>
               <h3 className="mt-2 text-[34px] font-bold tracking-[-0.075em]">{assessment.headline}</h3>
               <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-6 text-[#d8e5d6]">{assessment.summary}</p>
               {assessment.historicalNote && <p className="mt-3 text-xs text-[#c8d8c6]">{assessment.historicalNote}</p>}
-            </>
+            </div>
           ) : null}
         </div>
 
@@ -252,14 +259,27 @@ function RiskCard({
         </div>
       </section>
 
-      {assessment && (
-        <section className="mt-5 rounded-[24px] border border-[#e3e6e0] bg-white p-5">
+      {(assessment || isLoading || error) && (
+        <section className="mt-5 min-h-[112px] rounded-[24px] border border-[#e3e6e0] bg-white p-5">
           <div className="flex gap-3">
-            <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eef3e9] text-sm">💡</span>
-            <div>
-              <h2 className="font-semibold tracking-[-0.035em]">이렇게 준비하면 좋아요</h2>
-              <p className="mt-1.5 text-sm leading-6 text-[#687167]">{assessment.preparation}</p>
-            </div>
+            {isLoading ? (
+              <>
+                <span className="mt-0.5 size-7 shrink-0 animate-pulse rounded-full bg-[#eef3e9]" />
+                <div className="flex-1 pt-1">
+                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#edf0ea]" />
+                  <div className="mt-3 h-3.5 w-full animate-pulse rounded-full bg-[#f0f2ee]" />
+                  <div className="mt-2 h-3.5 w-4/5 animate-pulse rounded-full bg-[#f0f2ee]" />
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eef3e9] text-sm">💡</span>
+                <div>
+                  <h2 className="font-semibold tracking-[-0.035em]">{error ? "다시 확인해 주세요" : "이렇게 준비하면 좋아요"}</h2>
+                  <p className="mt-1.5 text-sm leading-6 text-[#687167]">{error ? "잠시 후 다시 시도하거나 KBO 공식 공지를 확인해 주세요." : assessment?.preparation}</p>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
