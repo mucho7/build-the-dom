@@ -21,7 +21,7 @@ export async function refreshUpcomingGameForecasts(now = new Date()): Promise<We
   const games = await prisma.game.findMany({
     where: {
       gameDate: { in: dates.map(({ date }) => new Date(`${date}T00:00:00.000Z`)) },
-      status: GameStatus.SCHEDULED,
+      status: { in: [GameStatus.SCHEDULED, GameStatus.PLAYED] },
     },
     include: { stadium: true },
     orderBy: { startTime: "asc" },

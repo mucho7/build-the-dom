@@ -60,7 +60,7 @@ async function getDateWeather(date: string) {
   try {
     const prisma = getPrisma();
     const games = await prisma.game.findMany({
-      where: { gameDate, status: GameStatus.SCHEDULED },
+      where: { gameDate, status: { in: [GameStatus.SCHEDULED, GameStatus.PLAYED] } },
       include: {
         stadium: true,
         historicalRainout: true,

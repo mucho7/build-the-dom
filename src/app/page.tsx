@@ -200,18 +200,28 @@ function ScoreCard({ game }: { game: KboGame }) {
   return (
     <section className="overflow-hidden rounded-[28px] bg-[#26364d] text-white shadow-[0_18px_45px_rgba(24,59,42,0.16)]">
       <div className="border-b border-white/15 px-6 py-5">
-        <p className="text-sm text-[#c7d4e3]">{formatDateLabel(game.date)} · {game.startTime}</p>
-        <h2 className="mt-1 text-lg font-semibold tracking-[-0.035em]">{game.stadium}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm text-[#c7d4e3]">{formatDateLabel(game.date)} · {game.startTime}</p>
+            <h2 className="mt-1 text-lg font-semibold tracking-[-0.035em]">{game.awayTeam} vs {game.homeTeam}</h2>
+            <p className="mt-1 text-sm text-[#c7d4e3]">{game.stadium}</p>
+          </div>
+          <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#d5e7f5]">KBO 스코어</span>
+        </div>
       </div>
-      <div className="flex h-[420px] flex-col items-center justify-center px-6 text-center">
-        <p className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#d5e7f5]">KBO 경기 스코어</p>
-        <div className="mt-8 flex w-full items-center justify-center gap-4 text-3xl font-bold tracking-[-0.06em] sm:gap-7 sm:text-4xl">
+      <div className="flex h-[372px] flex-col items-center justify-center px-6 py-9 text-center">
+        <div className="flex w-full items-center justify-center gap-4 text-3xl font-bold tracking-[-0.06em] sm:gap-7 sm:text-4xl">
           <span className="max-w-[110px] break-keep">{game.awayTeam}</span>
           <span className="rounded-2xl bg-white/10 px-4 py-3 tabular-nums">{hasScore ? `${game.awayScore} : ${game.homeScore}` : "- : -"}</span>
           <span className="max-w-[110px] break-keep">{game.homeTeam}</span>
         </div>
         <p className="mt-7 text-lg font-semibold text-[#d7eaff]">{scoreLabel}</p>
         <p className="mt-3 max-w-[320px] text-sm leading-6 text-[#c7d4e3]">KBO 일정에 경기 진행 또는 결과로 표시된 스코어예요.<br />최종 결과는 KBO 공식 기록을 확인해 주세요.</p>
+      </div>
+      <div className="grid grid-cols-3 border-t border-white/15 bg-black/10">
+        <Fact label={`${game.awayTeam} 점수`} value={game.awayScore?.toString() ?? "-"} />
+        <Fact label={`${game.homeTeam} 점수`} value={game.homeScore?.toString() ?? "-"} />
+        <Fact label="구장" value={game.stadium} />
       </div>
     </section>
   );
