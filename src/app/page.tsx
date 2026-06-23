@@ -211,7 +211,7 @@ function ScoreCard({ game }: { game: KboGame }) {
           <span className="max-w-[110px] break-keep">{game.homeTeam}</span>
         </div>
         <p className="mt-7 text-lg font-semibold text-[#d7eaff]">{scoreLabel}</p>
-        <p className="mt-3 max-w-[290px] text-sm leading-6 text-[#c7d4e3]">KBO 일정에 경기 진행 또는 결과로 표시된 스코어예요. 최종 결과는 KBO 공식 기록을 확인해 주세요.</p>
+        <p className="mt-3 max-w-[320px] text-sm leading-6 text-[#c7d4e3]">KBO 일정에 경기 진행 또는 결과로 표시된 스코어예요.<br />최종 결과는 KBO 공식 기록을 확인해 주세요.</p>
       </div>
     </section>
   );
