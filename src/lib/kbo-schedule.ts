@@ -11,6 +11,8 @@ export type KboGame = {
   homeTeam: string;
   stadium: string;
   status: KboGameStatus;
+  awayScore: number | null;
+  homeScore: number | null;
   note: string | null;
   sourceUrl: string;
 };
@@ -69,6 +71,7 @@ export function parseKboSchedule(payload: KboResponse, year: number): KboGame[] 
     const stadiumCell = row[timeIndex + 6];
     const noteCell = row[timeIndex + 7];
     const matchup = parseMatchup(matchupCell?.Text);
+    const score = parseScore(matchupCell?.Text);
     const startTime = getText(timeCell?.Text);
     if (!currentDate || !matchup || !/^\d{2}:\d{2}$/.test(startTime)) return [];
 
@@ -86,6 +89,8 @@ export function parseKboSchedule(payload: KboResponse, year: number): KboGame[] 
         homeTeam: matchup.homeTeam,
         stadium: getText(stadiumCell?.Text),
         status,
+        awayScore: score?.awayScore ?? null,
+        homeScore: score?.homeScore ?? null,
         note: note === "-" || note === "" ? null : note,
         sourceUrl: kboGameId
           ? `https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx?gameDate=${currentDate.replaceAll("-", "")}&gameId=${kboGameId}`
@@ -111,6 +116,16 @@ function parseMatchup(value: string | undefined) {
 
   if (teams.length < 2) return null;
   return { awayTeam: teams[0], homeTeam: teams.at(-1)! };
+}
+
+function parseScore(value: string | undefined) {
+  if (!value) return null;
+  const scores = Array.from(
+    value.matchAll(/<span[^>]*class=["'][^"']*(?:win|lose|same)[^"']*["'][^>]*>(\d+)<\/span>/g),
+    (match) => Number(match[1]),
+  );
+  if (scores.length < 2) return null;
+  return { awayScore: scores[0], homeScore: scores[1] };
 }
 
 function getGameId(row: KboCell[]) {
