@@ -30,10 +30,16 @@ export async function getHistoricalRainoutStats(
       },
     },
   });
-  const similarGames = games.filter((game) => {
+  const exactSimilarGames = games.filter((game) => {
     const forecast = game.weatherSnapshots[0];
     return forecast ? isSimilarWeather(forecast, currentWeather) : false;
   });
+  const similarGames = exactSimilarGames.length > 0
+    ? exactSimilarGames
+    : games.filter((game) => {
+        const forecast = game.weatherSnapshots[0];
+        return forecast ? isSimilarPrecipitation(forecast, currentWeather) : false;
+      });
   const rainCancelledGames = similarGames.filter(
     (game) => game.cancellation?.reason === CancellationReason.RAIN,
   ).length;
@@ -47,6 +53,7 @@ export async function getHistoricalRainoutStats(
       precipitationAmount: getPrecipitationBand(currentWeather.precipitationAmountMm),
       rainBeforeGame: currentWeather.rainBeforeGame,
     },
+    matchType: exactSimilarGames.length > 0 ? "exact" : "precipitation_only",
   };
 }
 
@@ -54,9 +61,16 @@ function isSimilarWeather(
   forecast: { precipitationProbability: number | null; precipitationAmountMm: number | null; rainedBeforeGame: boolean },
   current: Pick<RiskInput, "precipitationProbability" | "precipitationAmountMm" | "rainBeforeGame">,
 ) {
-  const precipitationMatch = getPrecipitationBand(forecast.precipitationAmountMm ?? 0) === getPrecipitationBand(current.precipitationAmountMm);
+  const precipitationMatch = isSimilarPrecipitation(forecast, current);
   const beforeGameMatch = forecast.rainedBeforeGame === current.rainBeforeGame;
   return precipitationMatch && beforeGameMatch;
+}
+
+function isSimilarPrecipitation(
+  forecast: { precipitationAmountMm: number | null },
+  current: Pick<RiskInput, "precipitationAmountMm">,
+) {
+  return getPrecipitationBand(forecast.precipitationAmountMm ?? 0) === getPrecipitationBand(current.precipitationAmountMm);
 }
 
 export function getPrecipitationBand(value: number) {

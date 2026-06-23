@@ -2,7 +2,7 @@ import { getStadium } from "@/data/stadiums";
 import { GameStatus, WeatherSnapshotKind } from "@/generated/prisma/client";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db";
 import { getCachedGameForecast } from "@/lib/weather-cache";
-import { applyHistoricalRainoutAdjustment, calculateRainoutRisk } from "@/lib/risk";
+import { applyHistoricalRainoutAdjustment, calculateRainoutRisk, type HistoricalRainoutStats } from "@/lib/risk";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +76,7 @@ async function getDateWeather(date: string) {
       games.flatMap((game) => {
         const forecast = game.weatherSnapshots[0];
         if (!forecast) return [];
-        const historicalRainout = game.historicalRainout?.forecastIssuedAt.getTime() === forecast.issuedAt.getTime()
+        const historicalRainout: HistoricalRainoutStats | null = game.historicalRainout?.forecastIssuedAt.getTime() === forecast.issuedAt.getTime()
           ? {
               similarGames: game.historicalRainout.similarGames,
               similarRainCancelledGames: game.historicalRainout.similarRainCancelledGames,
@@ -85,6 +85,7 @@ async function getDateWeather(date: string) {
                 precipitationAmount: game.historicalRainout.precipitationAmountBand,
                 rainBeforeGame: game.historicalRainout.rainedBeforeGame,
               },
+              matchType: game.historicalRainout.matchType === "PRECIPITATION_ONLY" ? "precipitation_only" : "exact",
             }
           : null;
         const risk = calculateRainoutRisk({

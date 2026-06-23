@@ -96,6 +96,7 @@ async function cacheGameForecast(game: {
       similarRainCancelledGames: historicalRainout.similarRainCancelledGames,
       precipitationAmountBand: getPrecipitationBand(gameForecast.precipitationAmountMm),
       rainedBeforeGame: gameForecast.rainBeforeGame,
+      matchType: historicalRainout.matchType === "precipitation_only" ? "PRECIPITATION_ONLY" : "EXACT",
     },
     update: {
       forecastIssuedAt: issuedAt,
@@ -103,6 +104,7 @@ async function cacheGameForecast(game: {
       similarRainCancelledGames: historicalRainout.similarRainCancelledGames,
       precipitationAmountBand: getPrecipitationBand(gameForecast.precipitationAmountMm),
       rainedBeforeGame: gameForecast.rainBeforeGame,
+      matchType: historicalRainout.matchType === "precipitation_only" ? "PRECIPITATION_ONLY" : "EXACT",
     },
   });
 }

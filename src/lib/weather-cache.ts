@@ -39,7 +39,7 @@ export async function getCachedGameForecast(
   const snapshot = game?.weatherSnapshots[0];
   if (!snapshot) return null;
 
-  const historicalRainout = game.historicalRainout?.forecastIssuedAt.getTime() === snapshot.issuedAt.getTime()
+  const historicalRainout: HistoricalRainoutStats | null = game.historicalRainout?.forecastIssuedAt.getTime() === snapshot.issuedAt.getTime()
     ? {
         similarGames: game.historicalRainout.similarGames,
         similarRainCancelledGames: game.historicalRainout.similarRainCancelledGames,
@@ -48,6 +48,7 @@ export async function getCachedGameForecast(
           precipitationAmount: game.historicalRainout.precipitationAmountBand,
           rainBeforeGame: game.historicalRainout.rainedBeforeGame,
         },
+        matchType: game.historicalRainout.matchType === "PRECIPITATION_ONLY" ? "precipitation_only" : "exact",
       }
     : null;
 

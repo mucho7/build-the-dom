@@ -69,6 +69,7 @@ model HistoricalRainout {
   similarRainCancelledGames Int
   precipitationAmountBand  String
   rainedBeforeGame         Boolean
+  matchType                String   @default("EXACT")
   calculatedAt             DateTime @updatedAt
 
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
