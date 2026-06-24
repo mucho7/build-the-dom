@@ -225,14 +225,28 @@ export default function Home() {
         )}
 
         <footer className="px-3 pt-6 text-center text-xs leading-5 text-[#8a9388]">
-          <p>날씨 예보는 바뀔 수 있어요. 최종 경기 진행 여부는 KBO 공식 공지를 확인해 주세요.</p>
+          <p>
+            날씨 예보는 바뀔 수 있어요. 최종 경기 진행 여부는
+            <a
+              href="https://www.koreabaseball.com/Kbo/Board/Notice/List.aspx"
+              target="_blank"
+              rel="noreferrer"
+              className="ml-1 font-semibold text-[#4c6346] underline underline-offset-2 transition hover:text-[#182017]"
+            >
+              KBO 공식 공지
+            </a>를 확인해 주세요.
+          </p>
           <a
             href="https://github.com/mucho7/build-the-dom"
             target="_blank"
             rel="noreferrer"
-            className="mt-3 inline-flex items-center gap-1 font-semibold text-[#4c6346] underline underline-offset-4 transition hover:text-[#182017]"
+            aria-label="GitHub에서 프로젝트 보기"
+            title="GitHub에서 프로젝트 보기"
+            className="mt-3 inline-flex size-9 items-center justify-center rounded-full text-[#4c6346] transition hover:bg-[#e4eddc] hover:text-[#182017] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#182017]"
           >
-            GitHub에서 프로젝트 보기 <span aria-hidden="true">↗</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 fill-current">
+              <path d="M12 1.5a10.5 10.5 0 0 0-3.32 20.46c.53.1.72-.23.72-.5v-1.85c-2.94.64-3.56-1.25-3.56-1.25-.48-1.22-1.18-1.55-1.18-1.55-.96-.66.07-.65.07-.65 1.06.08 1.62 1.09 1.62 1.09.95 1.61 2.48 1.15 3.08.88.1-.68.37-1.15.67-1.42-2.35-.27-4.82-1.18-4.82-5.23 0-1.16.41-2.1 1.09-2.85-.11-.27-.47-1.35.1-2.82 0 0 .89-.29 2.89 1.09A10.06 10.06 0 0 1 12 6.6c.9 0 1.8.12 2.65.36 2-1.38 2.88-1.09 2.88-1.09.58 1.47.22 2.55.11 2.82.68.75 1.08 1.69 1.08 2.85 0 4.06-2.48 4.95-4.83 5.21.38.33.72.97.72 1.96v2.91c0 .28.19.61.73.5A10.5 10.5 0 0 0 12 1.5Z" />
+            </svg>
           </a>
         </footer>
       </div>
