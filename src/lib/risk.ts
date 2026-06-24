@@ -102,9 +102,13 @@ export function applyHistoricalRainoutAdjustment(
   if (isDome) return assessment;
 
   const rate = history.rainoutRate;
-  // 완전 일치 표본이 충분하면, 실제 우천취소율을 위험도의 하한으로 삼는다.
+  // 완전 일치 표본은 5경기 이상일 때, 강수량 보조 표본은 60% 이상 취소됐을 때만
+  // 실제 우천취소율을 위험도의 하한으로 삼는다.
   // 예: 6경기 중 5경기 취소라면 예보 점수가 낮아도 최소 83점으로 표시한다.
-  const historicalScore = history.matchType === "exact" && history.similarGames >= 5
+  const shouldPrioritizeHistory = history.similarGames >= 5 && (
+    history.matchType === "exact" || rate >= 0.6
+  );
+  const historicalScore = shouldPrioritizeHistory
     ? Math.round(rate * 100)
     : null;
   const historicalNote = history.matchType === "exact"
