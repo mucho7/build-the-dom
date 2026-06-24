@@ -17,6 +17,64 @@ export type RiskAssessment = {
   historicalNote?: string;
 };
 
+type RiskCopy = Pick<RiskAssessment, "label" | "headline" | "summary" | "preparation">;
+
+const FORECAST_RISK_COPY = {
+  safe: {
+    label: "우취 걱정 낮음",
+    headline: "갈 만해요",
+    summary: "경기 시간에는 비가 내릴 가능성이 낮아요.",
+    preparation: "평소처럼 여유 있게 출발해도 좋아요.",
+  },
+  prepare: {
+    label: "우산은 챙겨요",
+    headline: "갈 만해요",
+    summary: "약한 비가 예상되지만 경기 진행에는 큰 영향이 없어 보여요.",
+    preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
+  },
+  caution: {
+    label: "출발 전 확인 필요",
+    headline: "조금 더 지켜봐요",
+    summary: "경기 시간에 비가 이어질 가능성이 있어요.",
+    preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
+  },
+  risky: {
+    label: "우취 걱정 높음",
+    headline: "다시 생각해 보세요",
+    summary: "경기 전후로 강한 비가 이어질 가능성이 높아요.",
+    preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
+  },
+} as const satisfies Record<RiskLevel, RiskCopy>;
+
+const HISTORY_RISK_COPY = {
+  safe: FORECAST_RISK_COPY.safe,
+  prepare: {
+    label: "우산은 챙겨요",
+    headline: "갈 만해요",
+    summary: "경기 진행에는 큰 영향이 없어 보이지만, 비에 대비하면 좋아요.",
+    preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
+  },
+  caution: {
+    label: "출발 전 확인 필요",
+    headline: "조금 더 지켜봐요",
+    summary: "예보와 과거 우천취소 이력을 함께 확인할 필요가 있어요.",
+    preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
+  },
+  risky: {
+    label: "우취 걱정 높음",
+    headline: "다시 생각해보세요",
+    summary: "예보와 과거 우천취소 이력을 함께 보면 취소 위험이 높아요.",
+    preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
+  },
+} as const satisfies Record<RiskLevel, RiskCopy>;
+
+const DOME_RISK_COPY = {
+  label: "강수 영향 낮음",
+  headline: "갈 만해요",
+  summary: "돔 구장이라 비가 와도 경기 진행에는 영향이 적어요.",
+  preparation: "평소처럼 여유 있게 출발해도 좋아요.",
+} as const satisfies RiskCopy;
+
 export type HistoricalRainoutStats = {
   similarGames: number;
   similarRainCancelledGames: number;
@@ -30,14 +88,7 @@ export type HistoricalRainoutStats = {
 
 export function calculateRainoutRisk(input: RiskInput): RiskAssessment {
   if (input.isDome) {
-    return {
-      level: "safe",
-      label: "강수 영향 낮음",
-      headline: "갈 만해요",
-      summary: "돔 구장이라 비가 와도 경기 진행에는 영향이 적어요.",
-      preparation: "평소처럼 여유 있게 출발해도 좋아요.",
-      score: 5,
-    };
+    return createRiskAssessment("safe", 5, DOME_RISK_COPY);
   }
 
   let score = 0;
@@ -51,47 +102,8 @@ export function calculateRainoutRisk(input: RiskInput): RiskAssessment {
 
   if (input.rainBeforeGame) score += 12;
 
-  if (score >= 65) {
-    return {
-      level: "risky",
-      label: "우취 걱정 높음",
-      headline: "다시 생각해 보세요",
-      summary: "경기 전후로 강한 비가 이어질 가능성이 높아요.",
-      preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
-      score,
-    };
-  }
-
-  if (score >= 38) {
-    return {
-      level: "caution",
-      label: "출발 전 확인 필요",
-      headline: "조금 더 지켜봐요",
-      summary: "경기 시간에 비가 이어질 가능성이 있어요.",
-      preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
-      score,
-    };
-  }
-
-  if (score >= 15) {
-    return {
-      level: "prepare",
-      label: "우산은 챙겨요",
-      headline: "갈 만해요",
-      summary: "약한 비가 예상되지만 경기 진행에는 큰 영향이 없어 보여요.",
-      preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
-      score,
-    };
-  }
-
-  return {
-    level: "safe",
-    label: "우취 걱정 낮음",
-    headline: "갈 만해요",
-    summary: "경기 시간에는 비가 내릴 가능성이 낮아요.",
-    preparation: "평소처럼 여유 있게 출발해도 좋아요.",
-    score,
-  };
+  const level = getRiskLevel(score);
+  return createRiskAssessment(level, score, FORECAST_RISK_COPY[level]);
 }
 
 export function applyHistoricalRainoutAdjustment(
@@ -121,13 +133,7 @@ export function applyHistoricalRainoutAdjustment(
 
   if (level === assessment.level) return { ...assessment, score, historicalNote };
 
-  return {
-    ...assessment,
-    score,
-    level,
-    ...getRiskCopy(level),
-    historicalNote,
-  };
+  return { ...createRiskAssessment(level, score, HISTORY_RISK_COPY[level]), historicalNote };
 }
 
 function getRiskLevel(score: number): RiskLevel {
@@ -137,38 +143,6 @@ function getRiskLevel(score: number): RiskLevel {
   return "safe";
 }
 
-function getRiskCopy(level: RiskLevel) {
-  if (level === "risky") {
-    return {
-      label: "우취 걱정 높음",
-      headline: "다시 생각해보세요",
-      summary: "예보와 과거 우천취소 이력을 함께 보면 취소 위험이 높아요.",
-      preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
-    };
-  }
-
-  if (level === "caution") {
-    return {
-      label: "출발 전 확인 필요",
-      headline: "조금 더 지켜봐요",
-      summary: "예보와 과거 우천취소 이력을 함께 확인할 필요가 있어요.",
-      preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
-    };
-  }
-
-  if (level === "prepare") {
-    return {
-      label: "우산은 챙겨요",
-      headline: "갈 만해요",
-      summary: "경기 진행에는 큰 영향이 없어 보이지만, 비에 대비하면 좋아요.",
-      preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
-    };
-  }
-
-  return {
-    label: "우취 걱정 낮음",
-    headline: "갈 만해요",
-    summary: "경기 시간에는 비가 내릴 가능성이 낮아요.",
-    preparation: "평소처럼 여유 있게 출발해도 좋아요.",
-  };
+function createRiskAssessment(level: RiskLevel, score: number, copy: RiskCopy): RiskAssessment {
+  return { level, score, ...copy };
 }
