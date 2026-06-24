@@ -228,12 +228,12 @@ export default function Home() {
           <p>
             날씨 예보는 바뀔 수 있어요. 최종 경기 진행 여부는
             <a
-              href="https://www.koreabaseball.com/Kbo/Board/Notice/List.aspx"
+              href="https://www.koreabaseball.com/Schedule/Schedule.aspx"
               target="_blank"
               rel="noreferrer"
               className="ml-1 font-semibold text-[#4c6346] underline underline-offset-2 transition hover:text-[#182017]"
             >
-              KBO 공식 공지
+              KBO 경기일정
             </a>를 확인해 주세요.
           </p>
           <a
