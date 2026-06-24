@@ -135,7 +135,7 @@ export default function Home() {
         <header className="mb-9 flex items-center justify-between">
           <div>
             <p className="mb-1 text-sm font-medium text-[#697367]">KBO 직관 날씨 가이드</p>
-            <h1 className="text-2xl font-bold tracking-[-0.05em]">우취될까?</h1>
+            <h1 className="text-2xl font-bold tracking-tighter">우취될까?</h1>
           </div>
           <div className="flex size-11 items-center justify-center rounded-2xl bg-[#e4eddc] text-xl" aria-label="비 예보">
             ☂️
@@ -179,12 +179,12 @@ export default function Home() {
           </div>
           {isGamesLoading ? (
             <div className="h-11 animate-pulse rounded-full bg-[#e6eae3]" />
-          ) : gamesError ? (
+          ) : gamesError ? (    
             <p className="rounded-2xl bg-[#fff0ed] px-4 py-3 text-sm text-[#9d3728]">{gamesError}</p>
           ) : gamesForSelectedDate.length === 0 ? (
             <p className="rounded-2xl bg-white px-4 py-3 text-sm text-[#687167]">이 날짜에는 예정된 경기가 없어요.</p>
           ) : (
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] scrollbar-none">
               {gamesForSelectedDate.map((game) => {
                 const isSelected = game.id === selectedGame?.id;
                 return (
