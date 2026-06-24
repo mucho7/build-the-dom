@@ -5,6 +5,9 @@ import { getStadiumByKboName } from "@/data/stadiums";
 import type { KboGame } from "@/lib/kbo-schedule";
 import type { RiskAssessment } from "@/lib/risk";
 
+const FAVORITE_TEAM_STORAGE_KEY = "rainout:favorite-team";
+const KBO_TEAMS = ["KIA", "KT", "LG", "NC", "SSG", "두산", "롯데", "삼성", "키움", "한화"];
+
 type WeatherResponse = {
   issuedAt: string;
   stadium: { isDome: boolean };
@@ -22,6 +25,7 @@ export default function Home() {
   const [games, setGames] = useState<KboGame[]>([]);
   const [selectedDate, setSelectedDate] = useState(dateOptions[0].date);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [favoriteTeam, setFavoriteTeam] = useState<string | null>(null);
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [isGamesLoading, setIsGamesLoading] = useState(true);
   const [weatherByDate, setWeatherByDate] = useState<Record<string, Record<string, WeatherResponse>>>({});
@@ -31,10 +35,19 @@ export default function Home() {
   const loadingWeatherDateRef = useRef<string | null>(null);
 
   const gamesForSelectedDate = games.filter((game) => game.date === selectedDate);
-  const selectedGame = gamesForSelectedDate.find((game) => game.id === selectedGameId) ?? gamesForSelectedDate[0] ?? null;
+  const selectedGame = gamesForSelectedDate.find((game) => game.id === selectedGameId)
+    ?? getPreferredGame(gamesForSelectedDate, favoriteTeam)
+    ?? null;
   const weather = selectedGame ? weatherByDate[selectedDate]?.[selectedGame.id] ?? null : null;
   const weatherError = selectedGame && weatherByDate[selectedDate] ? weatherErrors[selectedDate] ?? (weather ? null : "최신 예보 캐시를 준비하고 있어요. 잠시 후 다시 확인해 주세요.") : weatherErrors[selectedDate] ?? null;
   const isWeatherLoading = Boolean(selectedGame) && loadingWeatherDate === selectedDate && !weatherByDate[selectedDate];
+
+  useEffect(() => {
+    const storedTeam = window.localStorage.getItem(FAVORITE_TEAM_STORAGE_KEY);
+    if (!storedTeam || !KBO_TEAMS.includes(storedTeam)) return;
+    const timer = window.setTimeout(() => setFavoriteTeam(storedTeam), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,7 +75,6 @@ export default function Home() {
           .flat()
           .filter((game) => ["scheduled", "played"].includes(game.status) && availableDates.has(game.date));
         setGames(upcomingGames);
-        setSelectedGameId(upcomingGames.find((game) => game.date === dateOptions[0].date)?.id ?? null);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setGamesError(error instanceof Error ? error.message : "경기 일정을 불러오지 못했습니다.");
@@ -104,6 +116,19 @@ export default function Home() {
     return () => controller.abort();
   }, [selectedDate]);
 
+  function selectDate(date: string) {
+    setSelectedDate(date);
+    setSelectedGameId(getPreferredGame(games.filter((game) => game.date === date), favoriteTeam)?.id ?? null);
+  }
+
+  function changeFavoriteTeam(team: string) {
+    const nextTeam = team || null;
+    setFavoriteTeam(nextTeam);
+    if (nextTeam) window.localStorage.setItem(FAVORITE_TEAM_STORAGE_KEY, nextTeam);
+    else window.localStorage.removeItem(FAVORITE_TEAM_STORAGE_KEY);
+    setSelectedGameId(getPreferredGame(gamesForSelectedDate, nextTeam)?.id ?? null);
+  }
+
   return (
     <main className="min-h-screen bg-[#f6f7f4] px-5 py-6 text-[#182017] sm:px-8 sm:py-10">
       <div className="mx-auto max-w-xl">
@@ -118,7 +143,20 @@ export default function Home() {
         </header>
 
         <section aria-label="경기 선택" className="mb-5">
-          <p className="mb-3 text-sm font-semibold">언제 직관을 가나요?</p>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">언제 직관을 가나요?</p>
+            <label className="flex items-center gap-2 text-xs font-medium text-[#687167]">
+              응원팀
+              <select
+                value={favoriteTeam ?? ""}
+                onChange={(event) => changeFavoriteTeam(event.target.value)}
+                className="rounded-xl border border-[#dfe3db] bg-white px-2 py-1.5 text-xs font-semibold text-[#465044] outline-none transition focus:border-[#182017]"
+              >
+                <option value="">설정 안 함</option>
+                {KBO_TEAMS.map((team) => <option key={team} value={team}>{team}</option>)}
+              </select>
+            </label>
+          </div>
           <div className="mb-4 grid grid-cols-3 gap-2">
             {dateOptions.map((option) => {
               const isSelected = option.date === selectedDate;
@@ -127,8 +165,7 @@ export default function Home() {
                   key={option.date}
                   type="button"
                   onClick={() => {
-                    setSelectedDate(option.date);
-                    setSelectedGameId(games.find((game) => game.date === option.date)?.id ?? null);
+                    selectDate(option.date);
                   }}
                   className={`rounded-2xl border px-3 py-3 text-left transition ${
                     isSelected ? "border-[#182017] bg-[#182017] text-white" : "border-[#dfe3db] bg-white text-[#596157]"
@@ -149,7 +186,7 @@ export default function Home() {
           ) : (
             <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
               {gamesForSelectedDate.map((game) => {
-                const isSelected = game.id === selectedGameId;
+                const isSelected = game.id === selectedGame?.id;
                 return (
                   <button
                     key={game.id}
@@ -234,6 +271,12 @@ function getScoreLabel(game: KboGame) {
   if (game.awayScore === null || game.homeScore === null) return "스코어 집계 중";
   if (game.awayScore === game.homeScore) return "현재 동점";
   return game.awayScore > game.homeScore ? `${game.awayTeam} 우세` : `${game.homeTeam} 우세`;
+}
+
+function getPreferredGame(games: KboGame[], favoriteTeam: string | null) {
+  return games.find((game) => favoriteTeam && (game.awayTeam === favoriteTeam || game.homeTeam === favoriteTeam))
+    ?? games[0]
+    ?? null;
 }
 
 function RiskCard({
