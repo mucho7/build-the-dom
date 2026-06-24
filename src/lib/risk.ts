@@ -22,25 +22,25 @@ type RiskCopy = Pick<RiskAssessment, "label" | "headline" | "summary" | "prepara
 const FORECAST_RISK_COPY = {
   safe: {
     label: "우취 걱정 낮음",
-    headline: "갈 만해요",
+    headline: "출발해도 좋아요",
     summary: "경기 시간에는 비가 내릴 가능성이 낮아요.",
     preparation: "평소처럼 여유 있게 출발해도 좋아요.",
   },
   prepare: {
     label: "우산은 챙겨요",
-    headline: "갈 만해요",
+    headline: "우산 챙기고 출발!",
     summary: "약한 비가 예상되지만 경기 진행에는 큰 영향이 없어 보여요.",
     preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
   },
   caution: {
     label: "출발 전 확인 필요",
-    headline: "조금 더 지켜봐요",
+    headline: "출발 전 한 번 더 확인해요",
     summary: "경기 시간에 비가 이어질 가능성이 있어요.",
     preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
   },
   risky: {
     label: "우취 걱정 높음",
-    headline: "다시 생각해 보세요",
+    headline: "집관도 고려해보세요",
     summary: "경기 전후로 강한 비가 이어질 가능성이 높아요.",
     preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
   },
@@ -50,19 +50,19 @@ const HISTORY_RISK_COPY = {
   safe: FORECAST_RISK_COPY.safe,
   prepare: {
     label: "우산은 챙겨요",
-    headline: "갈 만해요",
+    headline: "우산 챙기고 출발!",
     summary: "경기 진행에는 큰 영향이 없어 보이지만, 비에 대비하면 좋아요.",
     preparation: "접이식 우산과 방수 가방을 챙기면 좋아요.",
   },
   caution: {
     label: "출발 전 확인 필요",
-    headline: "조금 더 지켜봐요",
+    headline: "출발 전 한 번 더 확인해요",
     summary: "예보와 과거 우천취소 이력을 함께 확인할 필요가 있어요.",
     preparation: "출발 직전에 예보와 KBO 공지를 다시 확인해 주세요.",
   },
   risky: {
     label: "우취 걱정 높음",
-    headline: "다시 생각해보세요",
+    headline: "집관도 고려해보세요",
     summary: "예보와 과거 우천취소 이력을 함께 보면 취소 위험이 높아요.",
     preparation: "출발 전 KBO 공식 경기 공지를 꼭 확인해 주세요.",
   },
