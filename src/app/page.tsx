@@ -271,7 +271,7 @@ function ScoreCard({ game }: { game: KboGame }) {
           <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#d5e7f5]">KBO 스코어</span>
         </div>
       </div>
-      <div className="flex h-[372px] flex-col items-center justify-center px-6 py-9 text-center">
+      <div className="flex h-[380px] flex-col items-center justify-center px-6 py-9 text-center">
         <div className="flex w-full items-center justify-center gap-4 text-3xl font-bold tracking-[-0.06em] sm:gap-7 sm:text-4xl">
           <span className="max-w-[110px] break-keep">{game.awayTeam}</span>
           <span className="rounded-2xl bg-white/10 px-4 py-3 tabular-nums">{hasScore ? `${game.awayScore} : ${game.homeScore}` : "- : -"}</span>
@@ -279,11 +279,6 @@ function ScoreCard({ game }: { game: KboGame }) {
         </div>
         <p className="mt-7 text-lg font-semibold text-[#d7eaff]">{scoreLabel}</p>
         <p className="mt-3 max-w-[320px] text-sm leading-6 text-[#c7d4e3]">KBO 일정에 경기 진행 또는 결과로 표시된 스코어예요.<br />최종 결과는 KBO 공식 기록을 확인해 주세요.</p>
-      </div>
-      <div className="grid grid-cols-3 border-t border-white/15 bg-black/10">
-        <Fact label={`${game.awayTeam} 점수`} value={game.awayScore?.toString() ?? "-"} />
-        <Fact label={`${game.homeTeam} 점수`} value={game.homeScore?.toString() ?? "-"} />
-        <Fact label="경기 상태" value="KBO 스코어" />
       </div>
     </section>
   );
@@ -416,15 +411,6 @@ function EmptyCard() {
       <h2 className="mt-5 text-xl font-bold tracking-tighter">확인할 경기를 골라주세요</h2>
       <p className="mt-2 text-sm leading-6 text-[#687167]">예정된 경기가 보이면 직관 판단을 바로 알려드릴게요.</p>
     </section>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="py-5 text-center not-last:border-r not-last:border-white/15">
-      <p className="text-xs text-[#b7cbb7]">{label}</p>
-      <p className="mt-1.5 text-sm font-semibold">{value}</p>
-    </div>
   );
 }
 
