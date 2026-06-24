@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getStadiumByKboName } from "@/data/stadiums";
 import type { KboGame } from "@/lib/kbo-schedule";
 import type { RiskAssessment } from "@/lib/risk";
 
@@ -175,6 +176,7 @@ export default function Home() {
             <ScoreCard game={selectedGame} />
           ) : (
             <RiskCard
+              key={selectedGame.id}
               game={selectedGame}
               weather={weather}
               isLoading={isWeatherLoading}
@@ -196,6 +198,7 @@ export default function Home() {
 function ScoreCard({ game }: { game: KboGame }) {
   const hasScore = game.awayScore !== null && game.homeScore !== null;
   const scoreLabel = getScoreLabel(game);
+  const stadiumName = getFullStadiumName(game.stadium);
 
   return (
     <section className="overflow-hidden rounded-[28px] bg-[#26364d] text-white shadow-[0_18px_45px_rgba(24,59,42,0.16)]">
@@ -204,7 +207,7 @@ function ScoreCard({ game }: { game: KboGame }) {
           <div>
             <p className="text-sm text-[#c7d4e3]">{formatDateLabel(game.date)} · {game.startTime}</p>
             <h2 className="mt-1 text-lg font-semibold tracking-[-0.035em]">{game.awayTeam} vs {game.homeTeam}</h2>
-            <p className="mt-1 text-sm text-[#c7d4e3]">{game.stadium}</p>
+            <p className="mt-1 text-sm text-[#c7d4e3]">{stadiumName}</p>
           </div>
           <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#d5e7f5]">KBO 스코어</span>
         </div>
@@ -221,7 +224,7 @@ function ScoreCard({ game }: { game: KboGame }) {
       <div className="grid grid-cols-3 border-t border-white/15 bg-black/10">
         <Fact label={`${game.awayTeam} 점수`} value={game.awayScore?.toString() ?? "-"} />
         <Fact label={`${game.homeTeam} 점수`} value={game.homeScore?.toString() ?? "-"} />
-        <Fact label="구장" value={game.stadium} />
+        <Fact label="경기 상태" value="KBO 스코어" />
       </div>
     </section>
   );
@@ -244,6 +247,8 @@ function RiskCard({
   isLoading: boolean;
   error: string | null;
 }) {
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const stadiumName = getFullStadiumName(game.stadium);
   const assessment = weather?.risk;
   const cardStyle = assessment
     ? { safe: "bg-[#183b2a]", prepare: "bg-[#31523a]", caution: "bg-[#765a1b]", risky: "bg-[#782e2a]" }[
@@ -253,14 +258,13 @@ function RiskCard({
   const icon = assessment?.level === "risky" ? "🌧️" : assessment?.level === "caution" ? "🌦️" : assessment?.level === "prepare" ? "🌂" : "🌤️";
 
   return (
-    <>
-      <section className={`overflow-hidden rounded-[28px] text-white shadow-[0_18px_45px_rgba(24,59,42,0.16)] ${cardStyle}`}>
+    <section className={`overflow-hidden rounded-[28px] text-white shadow-[0_18px_45px_rgba(24,59,42,0.16)] ${cardStyle}`}>
         <div className="border-b border-white/15 px-6 py-5">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-[#c8d8c6]">{formatDateLabel(game.date)} · {game.startTime}</p>
               <h2 className="mt-1 text-lg font-semibold tracking-[-0.035em]">{game.awayTeam} vs {game.homeTeam}</h2>
-              <p className="mt-1 text-sm text-[#c8d8c6]">{game.stadium}</p>
+              <p className="mt-1 text-sm text-[#c8d8c6]">{stadiumName}</p>
             </div>
             <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-[#d9ebd5]">
               {weather ? `예보 기준 ${formatIssuedTime(weather.issuedAt)}` : "예보 확인 중"}
@@ -268,7 +272,7 @@ function RiskCard({
           </div>
         </div>
 
-        <div className="flex h-[372px] flex-col items-center px-6 py-9 text-center">
+        <div className="flex h-[320px] flex-col items-center justify-center px-6 py-9 text-center">
           <div className={`mx-auto flex size-20 shrink-0 items-center justify-center rounded-full bg-[#d9f071] text-4xl shadow-[0_8px_22px_rgba(0,0,0,0.14)] ${isLoading ? "animate-pulse" : ""}`}>
             {isLoading ? <span className="size-8 rounded-full bg-[#183b2a]/15" /> : icon}
           </div>
@@ -286,47 +290,52 @@ function RiskCard({
               <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-6 text-[#d8e5d6]">{error}</p>
             </div>
           ) : assessment ? (
-            <div className="mt-6 flex min-h-[132px] flex-col items-center">
+            <div className="mt-6 flex min-h-[132px] flex-col items-center justify-center">
               <p className="text-sm font-semibold text-[#d9f071]">{assessment.label}</p>
               <h3 className="mt-2 text-[34px] font-bold tracking-[-0.075em]">{assessment.headline}</h3>
-              <p className="mx-auto mt-4 max-w-[320px] text-[15px] leading-6 text-[#d8e5d6]">{assessment.summary}</p>
-              {assessment.historicalNote && <p className="mt-3 text-xs text-[#c8d8c6]">{assessment.historicalNote}</p>}
             </div>
           ) : null}
         </div>
 
-        <div className="grid grid-cols-3 border-t border-white/15 bg-black/10">
-          <Fact label="경기 전 비" value={weather?.forecast.rainBeforeGame ? "있음" : weather ? "없음" : "-"} />
-          <Fact label="경기 중 비" value={weather ? `${weather.forecast.precipitationProbability}%` : "-"} />
-          <Fact label="구장" value={weather?.stadium.isDome ? "돔" : "야외"} />
-        </div>
-      </section>
-
-      {(assessment || isLoading || error) && (
-        <section className="mt-5 min-h-[112px] rounded-[24px] border border-[#e3e6e0] bg-white p-5">
-          <div className="flex gap-3">
-            {isLoading ? (
-              <>
-                <span className="mt-0.5 size-7 shrink-0 animate-pulse rounded-full bg-[#eef3e9]" />
-                <div className="flex-1 pt-1">
-                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#edf0ea]" />
-                  <div className="mt-3 h-3.5 w-full animate-pulse rounded-full bg-[#f0f2ee]" />
-                  <div className="mt-2 h-3.5 w-4/5 animate-pulse rounded-full bg-[#f0f2ee]" />
-                </div>
-              </>
-            ) : (
-              <>
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eef3e9] text-sm">💡</span>
-                <div>
-                  <h2 className="font-semibold tracking-[-0.035em]">{error ? "다시 확인해 주세요" : "이렇게 준비하면 좋아요"}</h2>
-                  <p className="mt-1.5 text-sm leading-6 text-[#687167]">{error ? "잠시 후 다시 시도하거나 KBO 공식 공지를 확인해 주세요." : assessment?.preparation}</p>
-                </div>
-              </>
+        {assessment && (
+          <>
+            <div className="flex items-center justify-between border-t border-white/15 bg-black/10 px-6 py-3">
+              <p className="text-sm font-semibold text-[#e6f0e3]">자세한 판단 근거</p>
+              <button
+                type="button"
+                aria-expanded={isDetailsOpen}
+                aria-controls={`risk-details-${game.id}`}
+                aria-label={isDetailsOpen ? "상세 정보 접기" : "상세 정보 펼치기"}
+                title={isDetailsOpen ? "상세 정보 접기" : "상세 정보 펼치기"}
+                onClick={() => setIsDetailsOpen((current) => !current)}
+                className="flex size-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <ChevronDown className={`size-5 transition-transform ${isDetailsOpen ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+            {isDetailsOpen && (
+              <div id={`risk-details-${game.id}`} className="border-t border-white/15 bg-black/15 px-6 py-5">
+                <table className="w-full border-collapse text-left text-sm">
+                  <tbody>
+                    <DetailRow label="경기 전 비" value={weather?.forecast.rainBeforeGame ? "비 예상" : "비 예상 없음"} />
+                    <DetailRow label="경기 중 강수확률" value={`${weather?.forecast.precipitationProbability ?? 0}%`} />
+                    <DetailRow label="예상 강수량" value={`${weather?.forecast.precipitationAmountMm ?? 0}mm`} />
+                    <DetailRow label="최근 3년 유사 경기" value={weather?.history ? `${weather.history.similarGames}경기` : "표본 없음"} />
+                    <DetailRow
+                      label="유사 경기 처리"
+                      value={weather?.history
+                        ? `우천취소 ${weather.history.similarRainCancelledGames}경기 · 진행 ${weather.history.similarGames - weather.history.similarRainCancelledGames}경기`
+                        : "집계할 표본 없음"}
+                    />
+                    <DetailRow label="판단 근거" value={assessment.summary} />
+                    <DetailRow label="준비 팁" value={assessment.preparation} />
+                  </tbody>
+                </table>
+              </div>
             )}
-          </div>
-        </section>
-      )}
-    </>
+          </>
+        )}
+    </section>
   );
 }
 
@@ -347,6 +356,27 @@ function Fact({ label, value }: { label: string; value: string }) {
       <p className="mt-1.5 text-sm font-semibold">{value}</p>
     </div>
   );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <tr className="border-b border-white/10 last:border-0">
+      <th scope="row" className="w-[42%] py-3 pr-4 align-top text-xs font-medium text-[#c8d8c6]">{label}</th>
+      <td className="py-3 align-top text-sm leading-5 text-white">{value}</td>
+    </tr>
+  );
+}
+
+function ChevronDown({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function getFullStadiumName(kboStadiumName: string) {
+  return getStadiumByKboName(kboStadiumName)?.name ?? kboStadiumName;
 }
 
 function getKoreanDateOptions() {
