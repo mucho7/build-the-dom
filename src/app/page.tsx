@@ -224,9 +224,17 @@ export default function Home() {
           <EmptyCard />
         )}
 
-        <p className="px-3 pt-6 text-center text-xs leading-5 text-[#8a9388]">
-          날씨 예보는 바뀔 수 있어요. 최종 경기 진행 여부는 KBO 공식 공지를 확인해 주세요.
-        </p>
+        <footer className="px-3 pt-6 text-center text-xs leading-5 text-[#8a9388]">
+          <p>날씨 예보는 바뀔 수 있어요. 최종 경기 진행 여부는 KBO 공식 공지를 확인해 주세요.</p>
+          <a
+            href="https://github.com/mucho7/build-the-dom"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center gap-1 font-semibold text-[#4c6346] underline underline-offset-4 transition hover:text-[#182017]"
+          >
+            GitHub에서 프로젝트 보기 <span aria-hidden="true">↗</span>
+          </a>
+        </footer>
       </div>
     </main>
   );
