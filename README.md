@@ -1,8 +1,8 @@
 # 우취될까?
 
-KBO 경기의 기상청 예보와 최근 3년 우천취소 이력을 바탕으로, **“오늘 직관을 가도 될까?”**를 빠르게 판단하도록 돕는 서비스입니다.
+KBO 경기의 기상청 예보와 최근 3년 우천취소 이력을 바탕으로, “오늘 직관을 가도 될까?”를 빠르게 판단하도록 돕는 서비스입니다.
 
-배포 서비스: [build-the-dom.vercel.app](https://build-the-dom.vercel.app) · 저장소: [mucho7/build-the-dom](https://github.com/mucho7/build-the-dom)
+배포 서비스: [build-the-dom.vercel.app](https://build-the-dom.vercel.app)
 
 ## 주요 기능
 
