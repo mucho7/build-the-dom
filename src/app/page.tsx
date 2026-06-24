@@ -362,7 +362,12 @@ function RiskCard({
           ) : null}
         </div>
 
-        {assessment && (
+        {isLoading ? (
+          <div className="flex items-center justify-between border-t border-white/15 bg-black/10 px-6 py-3" aria-label="상세 판단 근거를 불러오는 중">
+            <div className="h-4 w-28 animate-pulse rounded-full bg-white/15" />
+            <div className="size-9 animate-pulse rounded-full bg-white/15" />
+          </div>
+        ) : assessment && (
           <>
             <div className="flex items-center justify-between border-t border-white/15 bg-black/10 px-6 py-3">
               <p className="text-sm font-semibold text-[#e6f0e3]">자세한 판단 근거</p>
