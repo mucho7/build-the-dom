@@ -102,13 +102,17 @@ export function applyHistoricalRainoutAdjustment(
   if (isDome) return assessment;
 
   const rate = history.rainoutRate;
-  const adjustment = history.matchType === "exact" && history.similarGames >= 5
-    ? (rate >= 0.5 ? 12 : rate >= 0.25 ? 7 : rate === 0 ? -3 : 0)
-    : 0;
+  // 완전 일치 표본이 충분하면, 실제 우천취소율을 위험도의 하한으로 삼는다.
+  // 예: 6경기 중 5경기 취소라면 예보 점수가 낮아도 최소 83점으로 표시한다.
+  const historicalScore = history.matchType === "exact" && history.similarGames >= 5
+    ? Math.round(rate * 100)
+    : null;
   const historicalNote = history.matchType === "exact"
     ? `최근 3년간 예상 강수량과 경기 전 비가 비슷했던 ${history.similarGames}경기 중 ${history.similarRainCancelledGames}경기가 우천취소됐어요.`
     : `최근 3년간 강수량이 비슷했던 ${history.similarGames}경기 중 ${history.similarRainCancelledGames}경기가 우천취소됐어요. 경기 전 비 조건은 제외한 보조 참고예요.`;
-  const score = Math.max(0, Math.min(100, assessment.score + adjustment));
+  const score = historicalScore === null
+    ? assessment.score
+    : Math.max(assessment.score, historicalScore);
   const level = getRiskLevel(score);
 
   if (level === assessment.level) return { ...assessment, score, historicalNote };
