@@ -1,5 +1,24 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+
+const kboDiaGothic = localFont({
+  src: [
+    {
+      path: "../../public/fonts/KBO-Dia-Gothic_medium.woff",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/KBO-Dia-Gothic_bold.woff",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  display: "swap",
+  preload: true,
+  fallback: ["Arial", "Apple SD Gothic Neo", "Noto Sans KR", "sans-serif"],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://build-the-dom.vercel.app"),
@@ -27,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className={`${kboDiaGothic.className} min-h-full flex flex-col`}>{children}</body>
     </html>
   );
 }
