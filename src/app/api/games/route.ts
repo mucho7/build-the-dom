@@ -5,8 +5,12 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const now = new Date();
-  const year = getNumberParam(searchParams.get("year"), now.getFullYear());
-  const month = getNumberParam(searchParams.get("month"), now.getMonth() + 1);
+  const year = parseNumberParam(searchParams.get("year"), now.getFullYear());
+  const month = parseNumberParam(searchParams.get("month"), now.getMonth() + 1);
+
+  if (year === null || month === null) {
+    return Response.json({ message: "year와 month는 숫자로 입력해 주세요." }, { status: 400 });
+  }
 
   if (year < 1982 || year > 2100 || month < 1 || month > 12) {
     return Response.json({ message: "유효하지 않은 연도 또는 월입니다." }, { status: 400 });
@@ -31,7 +35,8 @@ export async function GET(request: Request) {
   }
 }
 
-function getNumberParam(value: string | null, fallback: number) {
-  if (!value || !/^\d+$/.test(value)) return fallback;
+function parseNumberParam(value: string | null, fallback: number) {
+  if (value === null || value === "") return fallback;
+  if (!/^\d+$/.test(value)) return null;
   return Number(value);
 }

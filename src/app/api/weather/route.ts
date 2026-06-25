@@ -8,27 +8,46 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const stadium = getStadium(searchParams.get("stadium") ?? "");
   const date = searchParams.get("date");
+  const stadiumParam = searchParams.get("stadium");
   const time = searchParams.get("time");
 
-  if (!date || !/^\d{8}$/.test(date)) {
+  const parsedDate = parseDateParam(date);
+  if (!parsedDate) {
     return Response.json(
       { message: "date(YYYYMMDD) 값을 확인해 주세요." },
       { status: 400 },
     );
   }
 
+  const hasDetailedQuery = stadiumParam !== null || time !== null;
+  if (!hasDetailedQuery) {
+    if (!isDatabaseConfigured()) {
+      return Response.json({ message: "기상청 예보 캐시가 아직 설정되지 않았습니다." }, { status: 503 });
+    }
+
+    return getDateWeather(parsedDate.gameDate);
+  }
+
+  if (!stadiumParam) {
+    return Response.json({ message: "stadium 값을 확인해 주세요." }, { status: 400 });
+  }
+
+  const stadium = getStadium(stadiumParam);
+  if (!stadium) {
+    return Response.json({ message: "지원하지 않는 구장입니다." }, { status: 400 });
+  }
+
+  if (!time || !isValidTimeParam(time)) {
+    return Response.json({ message: "time(HH:mm) 값을 확인해 주세요." }, { status: 400 });
+  }
+
   if (!isDatabaseConfigured()) {
     return Response.json({ message: "기상청 예보 캐시가 아직 설정되지 않았습니다." }, { status: 503 });
   }
 
-  if (!stadium || !time || !/^\d{2}:\d{2}$/.test(time)) {
-    return getDateWeather(date);
-  }
-
   try {
-    const gameForecast = await getCachedGameForecast(stadium.id, `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`, time);
+    const gameForecast = await getCachedGameForecast(stadium.id, parsedDate.isoDate, time);
     if (!gameForecast) {
       return Response.json(
         { message: "최신 예보 캐시를 준비하고 있어요. 잠시 후 다시 확인해 주세요." },
@@ -55,8 +74,38 @@ export async function GET(request: Request) {
   }
 }
 
-async function getDateWeather(date: string) {
-  const gameDate = new Date(`${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T00:00:00.000Z`);
+function parseDateParam(date: string | null) {
+  if (!date || !/^\d{8}$/.test(date)) return null;
+
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(4, 6));
+  const day = Number(date.slice(6, 8));
+  const gameDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    gameDate.getUTCFullYear() !== year ||
+    gameDate.getUTCMonth() !== month - 1 ||
+    gameDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return {
+    gameDate,
+    isoDate: `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`,
+  };
+}
+
+function isValidTimeParam(time: string) {
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return false;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
+async function getDateWeather(gameDate: Date) {
   try {
     const prisma = getPrisma();
     const games = await prisma.game.findMany({
