@@ -61,6 +61,8 @@ npm run sync:kbo-weather-history
 
 현재 예보는 경기별 캐시에 저장되며, 화면은 `GET /api/weather?date=YYYYMMDD`로 해당 날짜의 결과를 한 번에 읽습니다. 상세 설계와 score 정책은 [날씨 캐시 전략 문서](docs/weather-cache-strategy.md)에서 확인할 수 있습니다.
 
+소규모 사용자 피드백을 받을 때는 [QA 피드백 가이드](docs/qa-feedback-guide.md)를 기준으로 질문과 반영 우선순위를 정리합니다.
+
 ## 위험도 score 정책
 
 기본 점수는 경기 시간대 강수확률·예상 강수량·경기 전 비 여부로 계산합니다. 완전 일치 유사 표본이 5경기 이상이면 우천취소율을 score 하한으로 사용합니다. 강수량만 일치한 표본도 5경기 이상이고 취소율이 60% 이상이면 같은 방식으로 반영합니다.
