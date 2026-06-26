@@ -73,6 +73,8 @@ npm run sync:kbo-weather-history
 
 Vercel에 배포한 뒤 환경 변수 `DATABASE_URL`, `KMA_AUTH_KEY`, `KMA_ASOS_SERVICE_KEY`, `CRON_SECRET`을 설정합니다.
 
+운영 배포는 `master` push가 아니라 `v*` 태그 push로만 실행합니다. 자세한 절차는 [릴리즈 프로세스](docs/release-process.md)를 확인하세요.
+
 Vercel Hobby의 크론 제약을 보완하기 위해 GitHub Actions가 매시 17분(UTC)에 `/api/cron/weather`를 호출합니다. 저장소의 `Settings → Secrets and variables → Actions`에 아래 값을 설정하세요.
 
 | 구분 | 이름 | 값 |

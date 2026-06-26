@@ -1,0 +1,48 @@
+name: 태그 기반 프로덕션 배포
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 린트 검사
+        run: npm run lint
+
+      - name: Vercel CLI 설치
+        run: npm install --global vercel@latest
+
+      - name: Vercel 프로덕션 환경 불러오기
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: 프로덕션 빌드
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: 프로덕션 배포
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
