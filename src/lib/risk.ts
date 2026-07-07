@@ -70,7 +70,7 @@ const HISTORY_RISK_COPY = {
 
 const DOME_RISK_COPY = {
   label: "강수 영향 낮음",
-  headline: "갈 만해요",
+  headline: "출발해도 좋아요",
   summary: "돔 구장이라 비가 와도 경기 진행에는 영향이 적어요.",
   preparation: "평소처럼 여유 있게 출발해도 좋아요.",
 } as const satisfies RiskCopy;
