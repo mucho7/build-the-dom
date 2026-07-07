@@ -7,6 +7,12 @@ import { getCachedGameForecast } from "@/lib/weather-cache";
 import { applyHistoricalRainoutAdjustment, calculateRainoutRisk, type HistoricalRainoutStats } from "@/lib/risk";
 
 export const dynamic = "force-dynamic";
+const DATE_WEATHER_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type DateWeatherResponse = {
+  weatherByGameId: Record<string, WeatherResponse>;
+  issuedAt: string;
+};
 
 type WeatherResponse = {
   stadium: { isDome: boolean };
@@ -19,6 +25,13 @@ type WeatherResponse = {
   history: HistoricalRainoutStats | null;
   issuedAt: string;
 };
+
+type DateWeatherCacheEntry = {
+  expiresAt: number;
+  value: DateWeatherResponse;
+};
+
+const dateWeatherCache = new Map<string, DateWeatherCacheEntry>();
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -121,16 +134,47 @@ function isValidTimeParam(time: string) {
 
 async function getDateWeather(gameDate: Date) {
   try {
+    const cacheKey = gameDate.toISOString().slice(0, 10);
+    const cached = getCachedDateWeather(cacheKey);
+    if (cached) {
+      return Response.json(cached, {
+        headers: {
+          "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+          "X-Weather-Date-Cache": "HIT",
+        },
+      });
+    }
+
     const prisma = getPrisma();
     const weatherByGameId = await getWeatherByGameId(prisma, gameDate);
+    const payload: DateWeatherResponse = { weatherByGameId, issuedAt: new Date().toISOString() };
+    setCachedDateWeather(cacheKey, payload);
     return Response.json(
-      { weatherByGameId, issuedAt: new Date().toISOString() },
-      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=300" } },
+      payload,
+      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=300", "X-Weather-Date-Cache": "MISS" } },
     );
   } catch (error) {
     console.error("날짜별 기상청 예보 캐시 조회 실패", error);
     return Response.json({ message: "날짜별 기상청 예보 캐시를 불러오지 못했습니다." }, { status: 502 });
   }
+}
+
+function getCachedDateWeather(cacheKey: string) {
+  const entry = dateWeatherCache.get(cacheKey);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    dateWeatherCache.delete(cacheKey);
+    return null;
+  }
+
+  return entry.value;
+}
+
+function setCachedDateWeather(cacheKey: string, value: DateWeatherResponse) {
+  dateWeatherCache.set(cacheKey, {
+    expiresAt: Date.now() + DATE_WEATHER_CACHE_TTL_MS,
+    value,
+  });
 }
 
 async function getWeatherByGameId(prisma: ReturnType<typeof getPrisma>, gameDate: Date) {
