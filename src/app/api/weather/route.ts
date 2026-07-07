@@ -1,10 +1,24 @@
-import { getStadium } from "@/data/stadiums";
+import { getStadium, getStadiumByKboName } from "@/data/stadiums";
 import { GameStatus, WeatherSnapshotKind } from "@/generated/prisma/client";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db";
+import { fetchKboSchedule } from "@/lib/kbo-schedule";
+import { fetchStadiumForecast, getRiskForecast } from "@/lib/kma-forecast";
 import { getCachedGameForecast } from "@/lib/weather-cache";
 import { applyHistoricalRainoutAdjustment, calculateRainoutRisk, type HistoricalRainoutStats } from "@/lib/risk";
 
 export const dynamic = "force-dynamic";
+
+type WeatherResponse = {
+  stadium: { isDome: boolean };
+  forecast: {
+    precipitationProbability: number;
+    precipitationAmountMm: number;
+    rainBeforeGame: boolean;
+  };
+  risk: ReturnType<typeof calculateRainoutRisk>;
+  history: HistoricalRainoutStats | null;
+  issuedAt: string;
+};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -108,7 +122,33 @@ function isValidTimeParam(time: string) {
 async function getDateWeather(gameDate: Date) {
   try {
     const prisma = getPrisma();
-    const games = await prisma.game.findMany({
+    const weatherByGameId = await getWeatherByGameId(prisma, gameDate);
+    return Response.json(
+      { weatherByGameId, issuedAt: new Date().toISOString() },
+      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=300" } },
+    );
+  } catch (error) {
+    console.error("날짜별 기상청 예보 캐시 조회 실패", error);
+    return Response.json({ message: "날짜별 기상청 예보 캐시를 불러오지 못했습니다." }, { status: 502 });
+  }
+}
+
+async function getWeatherByGameId(prisma: ReturnType<typeof getPrisma>, gameDate: Date) {
+  const isoDate = gameDate.toISOString().slice(0, 10);
+  const kmaDate = isoDate.replaceAll("-", "");
+  const year = gameDate.getUTCFullYear();
+  const month = gameDate.getUTCMonth() + 1;
+
+  let games: Awaited<ReturnType<typeof fetchKboSchedule>> = [];
+  try {
+    games = await fetchKboSchedule({ year, month });
+  } catch (error) {
+    console.error("KBO 일정 조회 실패", error);
+  }
+  games = games.filter((game) => game.date === isoDate && ["scheduled", "played"].includes(game.status));
+
+  if (games.length === 0) {
+    const dbGames = await prisma.game.findMany({
       where: { gameDate, status: { in: [GameStatus.SCHEDULED, GameStatus.PLAYED] } },
       include: {
         stadium: true,
@@ -121,53 +161,118 @@ async function getDateWeather(gameDate: Date) {
       },
       orderBy: { startTime: "asc" },
     });
-    const weatherByGameId = Object.fromEntries(
-      games.flatMap((game) => {
-        const forecast = game.weatherSnapshots[0];
-        if (!forecast) return [];
-        const historicalRainout: HistoricalRainoutStats | null = game.historicalRainout?.forecastIssuedAt.getTime() === forecast.issuedAt.getTime()
-          ? {
-              similarGames: game.historicalRainout.similarGames,
-              similarRainCancelledGames: game.historicalRainout.similarRainCancelledGames,
-              rainoutRate: game.historicalRainout.similarRainCancelledGames / game.historicalRainout.similarGames,
-              criteria: {
-                precipitationAmount: game.historicalRainout.precipitationAmountBand,
-                rainBeforeGame: game.historicalRainout.rainedBeforeGame,
-              },
-              matchType: game.historicalRainout.matchType === "PRECIPITATION_ONLY" ? "precipitation_only" : "exact",
-            }
-          : null;
-        const risk = calculateRainoutRisk({
-          isDome: game.stadium.isDome,
-          precipitationProbability: forecast.precipitationProbability ?? 0,
-          precipitationAmountMm: forecast.precipitationAmountMm ?? 0,
-          rainBeforeGame: forecast.rainedBeforeGame,
-        });
-        const adjustedRisk = historicalRainout
-          ? applyHistoricalRainoutAdjustment(risk, historicalRainout, game.stadium.isDome)
-          : risk;
-        return [[
-          game.kboGameId,
-          {
-            stadium: { isDome: game.stadium.isDome },
-            forecast: {
-              precipitationProbability: forecast.precipitationProbability ?? 0,
-              precipitationAmountMm: forecast.precipitationAmountMm ?? 0,
-              rainBeforeGame: forecast.rainedBeforeGame,
-            },
-            risk: adjustedRisk,
-            history: historicalRainout,
-            issuedAt: forecast.issuedAt.toISOString(),
-          },
-        ]];
-      }),
-    );
-    return Response.json(
-      { weatherByGameId, issuedAt: new Date().toISOString() },
-      { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=300" } },
-    );
-  } catch (error) {
-    console.error("날짜별 기상청 예보 캐시 조회 실패", error);
-    return Response.json({ message: "날짜별 기상청 예보 캐시를 불러오지 못했습니다." }, { status: 502 });
+
+    return Object.fromEntries((await Promise.all(dbGames.map((game) => buildWeatherEntryFromDbGame(game)))).filter(Boolean) as Array<
+      [string, WeatherResponse]
+    >);
   }
+
+  const entries = await Promise.all(
+    games.map(async (game) => {
+      const stadium = getStadiumByKboName(game.stadium);
+      if (!stadium) return null;
+
+      const dbGame = await prisma.game.findUnique({
+        where: { kboGameId: game.id },
+        include: {
+          stadium: true,
+          historicalRainout: true,
+          weatherSnapshots: {
+            where: { kind: WeatherSnapshotKind.FORECAST },
+            orderBy: { issuedAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+
+      const cachedEntry = dbGame ? await buildWeatherEntryFromDbGame(dbGame) : null;
+      if (cachedEntry) return cachedEntry;
+
+      const forecast = await fetchStadiumForecast(stadium);
+      const gameForecast = getRiskForecast(forecast.hours, kmaDate, game.startTime);
+      if (!gameForecast) return null;
+
+      return [
+        game.id,
+        {
+          stadium: { isDome: stadium.isDome },
+          forecast: {
+            precipitationProbability: gameForecast.precipitationProbability,
+            precipitationAmountMm: gameForecast.precipitationAmountMm,
+            rainBeforeGame: gameForecast.rainBeforeGame,
+          },
+          risk: calculateRainoutRisk({
+            isDome: stadium.isDome,
+            precipitationProbability: gameForecast.precipitationProbability,
+            precipitationAmountMm: gameForecast.precipitationAmountMm,
+            rainBeforeGame: gameForecast.rainBeforeGame,
+          }),
+          history: null,
+          issuedAt: forecast.issuedAt,
+        },
+      ] as const;
+    }),
+  );
+
+  return Object.fromEntries(entries.filter(Boolean) as Array<[string, WeatherResponse]>);
+}
+
+async function buildWeatherEntryFromDbGame(game: {
+  id: string;
+  kboGameId: string;
+  stadium: { isDome: boolean };
+  historicalRainout: {
+    forecastIssuedAt: Date;
+    similarGames: number;
+    similarRainCancelledGames: number;
+    precipitationAmountBand: string;
+    rainedBeforeGame: boolean;
+    matchType: string;
+  } | null;
+  weatherSnapshots: Array<{
+    issuedAt: Date;
+    precipitationProbability: number | null;
+    precipitationAmountMm: number | null;
+    rainedBeforeGame: boolean;
+  }>;
+}) {
+  const forecast = game.weatherSnapshots[0];
+  if (!forecast) return null;
+
+  const historicalRainout: HistoricalRainoutStats | null = game.historicalRainout?.forecastIssuedAt.getTime() === forecast.issuedAt.getTime()
+    ? {
+        similarGames: game.historicalRainout.similarGames,
+        similarRainCancelledGames: game.historicalRainout.similarRainCancelledGames,
+        rainoutRate: game.historicalRainout.similarRainCancelledGames / game.historicalRainout.similarGames,
+        criteria: {
+          precipitationAmount: game.historicalRainout.precipitationAmountBand,
+          rainBeforeGame: game.historicalRainout.rainedBeforeGame,
+        },
+        matchType: game.historicalRainout.matchType === "PRECIPITATION_ONLY" ? "precipitation_only" : "exact",
+      }
+    : null;
+  const risk = calculateRainoutRisk({
+    isDome: game.stadium.isDome,
+    precipitationProbability: forecast.precipitationProbability ?? 0,
+    precipitationAmountMm: forecast.precipitationAmountMm ?? 0,
+    rainBeforeGame: forecast.rainedBeforeGame,
+  });
+  const adjustedRisk = historicalRainout
+    ? applyHistoricalRainoutAdjustment(risk, historicalRainout, game.stadium.isDome)
+    : risk;
+
+  return [
+    game.kboGameId,
+    {
+      stadium: { isDome: game.stadium.isDome },
+      forecast: {
+        precipitationProbability: forecast.precipitationProbability ?? 0,
+        precipitationAmountMm: forecast.precipitationAmountMm ?? 0,
+        rainBeforeGame: forecast.rainedBeforeGame,
+      },
+      risk: adjustedRisk,
+      history: historicalRainout,
+      issuedAt: forecast.issuedAt.toISOString(),
+    },
+  ] as const;
 }

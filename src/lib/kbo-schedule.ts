@@ -78,7 +78,11 @@ export function parseKboSchedule(payload: KboResponse, year: number): KboGame[] 
     const note = getText(noteCell?.Text);
     const status = getStatus(matchupCell?.Text ?? "", note);
     const kboGameId = getGameId(row);
-    const gameId = kboGameId ?? `${currentDate}-${matchup.awayTeam}-${matchup.homeTeam}`;
+    const gameId = kboGameId ?? getFallbackGameId({
+      date: currentDate,
+      awayTeam: matchup.awayTeam,
+      homeTeam: matchup.homeTeam,
+    });
 
     return [
       {
@@ -131,6 +135,10 @@ function parseScore(value: string | undefined) {
 function getGameId(row: KboCell[]) {
   const gameCenterCell = row.find((cell) => cell.Text.includes("gameId="))?.Text ?? "";
   return gameCenterCell.match(/gameId=([^&'"]+)/)?.[1] ?? null;
+}
+
+export function getFallbackGameId(game: Pick<KboGame, "date" | "awayTeam" | "homeTeam">) {
+  return `${game.date}-${game.awayTeam}-${game.homeTeam}`;
 }
 
 function getStatus(matchupHtml: string, note: string): KboGameStatus {
