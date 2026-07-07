@@ -10,6 +10,9 @@ export type WeatherCacheSyncResult = {
   failedGameIds: string[];
 };
 
+const WEATHER_CACHE_DAYS = 4;
+const WEATHER_CACHE_GAME_LIMIT = 20;
+
 export async function refreshUpcomingGameForecasts(now = new Date()): Promise<WeatherCacheSyncResult> {
   const dates = getKoreanDateRange(now);
   const targetMonths = Array.from(
@@ -25,7 +28,7 @@ export async function refreshUpcomingGameForecasts(now = new Date()): Promise<We
     },
     include: { stadium: true },
     orderBy: { startTime: "asc" },
-    take: 15,
+    take: WEATHER_CACHE_GAME_LIMIT,
   });
   const results = await Promise.allSettled(games.map((game) => cacheGameForecast(game)));
   const failedGameIds = results.flatMap((result, index) =>
@@ -112,7 +115,7 @@ async function cacheGameForecast(game: {
 function getKoreanDateRange(now: Date) {
   const start = getKoreanDate(now);
   const startAt = new Date(`${start.date}T00:00:00+09:00`);
-  return Array.from({ length: 3 }, (_, offset) => getKoreanDate(new Date(startAt.getTime() + offset * 86_400_000)));
+  return Array.from({ length: WEATHER_CACHE_DAYS }, (_, offset) => getKoreanDate(new Date(startAt.getTime() + offset * 86_400_000)));
 }
 
 function getKoreanDate(now: Date) {
